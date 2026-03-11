@@ -1,0 +1,50 @@
+# Example docker-compose for multi-service vulnerability testing
+# Adjust services based on the target project's requirements
+
+version: "3.8"
+
+services:
+  target:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://vuln:vuln@db:5432/vulndb
+      - REDIS_URL=redis://cache:6379
+      - DEBUG=true
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - vuln-net
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: vuln
+      POSTGRES_PASSWORD: vuln
+      POSTGRES_DB: vulndb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vuln"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - vuln-net
+
+  cache:
+    image: redis:7-alpine
+    networks:
+      - vuln-net
+
+volumes:
+  pgdata:
+
+networks:
+  vuln-net:
+    driver: bridge
