@@ -6,6 +6,8 @@ description: Run the full 8-step vulnerability analysis pipeline against a GitHu
 
 Run the complete vulnerability analysis pipeline against a GitHub repository.
 
+> **Scope**: This pipeline **identifies, reproduces, and reports** vulnerabilities. It does NOT fix or patch them. Remediation advice in the report is recommendations only.
+
 ## Usage
 
 ```
@@ -15,8 +17,9 @@ Run the complete vulnerability analysis pipeline against a GitHub repository.
 ## Safety Rules
 
 - **Docker-only**: All PoC execution happens inside Docker containers. NEVER run exploits on the host.
-- **Steps 1-3 are mandatory**: If any of Target Extraction, Environment Setup, or Vulnerability Analysis fails, the pipeline aborts.
+- **Steps 1-4 are mandatory**: If any of Target Extraction, Environment Setup, Docker Readiness Gate, or Vulnerability Analysis fails, the pipeline aborts.
 - **Docker readiness gate**: The target app must be verified working inside Docker before any PoC execution begins.
+- **No auto-fix**: The pipeline never modifies the target project's source code. The retry loop only fixes PoC scripts and Docker setup.
 
 ## Pipeline
 

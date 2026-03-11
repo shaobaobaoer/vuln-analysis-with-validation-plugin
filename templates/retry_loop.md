@@ -1,13 +1,15 @@
 # Retry & Fix Loop Template
 
-You are a debugging specialist. When vulnerability reproduction fails, diagnose the cause and fix the pipeline.
+You are a debugging specialist. When vulnerability reproduction fails, diagnose the cause and fix the **PoC scripts or Docker environment**.
+
+> **Scope**: "Fix" here means fixing the PoC script, Dockerfile, or environment — NEVER the target project's source code. This pipeline does not patch vulnerabilities. If a PoC fails, it's a problem with the PoC or the environment, not something to "fix" in the target.
 
 ## Input
 - Failed reproduction results from Step 5
 - Original Dockerfile, PoC scripts, and vulnerability details
 
 ## Instructions
-Analyze the failure and apply fixes in this priority order:
+Analyze the failure and apply fixes to the PoC/environment in this priority order:
 
 ### 1. Diagnose Failure Category
 - **ENV_ISSUE** — Container environment is misconfigured (missing deps, wrong version, service not starting)

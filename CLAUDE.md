@@ -4,7 +4,8 @@ This is a Claude plugin for automated security vulnerability verification of ope
 
 ## Project Overview
 
-- **Purpose**: Automated 8-step vulnerability analysis pipeline
+- **Purpose**: Automated vulnerability analysis pipeline — **discovery, reproduction, and reporting only**
+- **Scope**: This pipeline does NOT fix or patch vulnerabilities. It identifies, reproduces, and reports them. Remediation advice in the report is recommendations only.
 - **Language**: Python 3.12+
 - **Dependencies**: `requests` (only external dependency)
 - **Execution**: All testing runs in isolated Docker containers
@@ -23,7 +24,9 @@ This is a Claude plugin for automated security vulnerability verification of ope
    - The health check passes
    - If the app does not work inside Docker, fix the Docker setup FIRST. Do NOT proceed to PoC generation/execution with a broken environment.
 
-4. **No host-side execution**: The following are FORBIDDEN on the host:
+4. **No remediation step**: This pipeline does NOT automatically fix, patch, or modify the target project's source code. The scope is strictly: identify → reproduce → report. The "retry loop" fixes only PoC scripts and Docker environment, NEVER the target application. Remediation recommendations in the final report are advisory only.
+
+5. **No host-side execution**: The following are FORBIDDEN on the host:
    - Running `python3 poc_*.py` directly on the host
    - Using `curl`/`wget` to exploit host-local services that are NOT Docker containers
    - Executing any command injection, file write, or deserialization payload outside Docker
