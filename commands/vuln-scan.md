@@ -40,7 +40,7 @@ Execute all steps sequentially using the orchestrator agent:
 ## Instructions
 
 1. Create `workspace/` directory if it doesn't exist
-2. Delegate to the `orchestrator` agent defined in `agents/orchestrator.md`
+2. Delegate to the `orchestrator` agent defined in `agents/orchestrator/AGENT.md`
 3. The orchestrator will coordinate sub-agents (`analyzer`, `builder`, `exploiter`, `reporter`)
 4. The orchestrator MUST verify Docker readiness before delegating to the exploiter
 5. Use skills from `skills/` for type-specific logic

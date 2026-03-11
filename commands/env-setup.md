@@ -15,7 +15,7 @@ Generate and build a Docker environment for a target project.
 ## Instructions
 
 1. Run target extraction (Step 1) to identify project type → `workspace/target.json`
-2. Delegate to the `builder` agent (`agents/builder.md`)
+2. Delegate to the `builder` agent (`agents/builder/AGENT.md`)
 3. Use `skills/environment-builder/SKILL.md` for Dockerfile generation patterns
 4. Build, start, and verify the container is healthy
 5. On build failure, diagnose and fix (max 3 attempts)

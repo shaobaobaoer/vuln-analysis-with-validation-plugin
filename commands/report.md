@@ -14,7 +14,7 @@ Compile all findings into a vulnerability report.
 
 ## Instructions
 
-1. Delegate to the `reporter` agent (`agents/reporter.md`)
+1. Delegate to the `reporter` agent (`agents/reporter/AGENT.md`)
 2. Read all workspace artifacts (target.json, vulnerabilities.json, results.json)
 3. Use `templates/report_delivery.md` for report structure guidance
 4. Generate:

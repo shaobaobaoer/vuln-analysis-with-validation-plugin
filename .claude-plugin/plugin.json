@@ -18,11 +18,11 @@
     "code-audit"
   ],
   "agents": [
-    "./agents/orchestrator.md",
-    "./agents/analyzer.md",
-    "./agents/builder.md",
-    "./agents/exploiter.md",
-    "./agents/reporter.md"
+    "./agents/orchestrator/AGENT.md",
+    "./agents/analyzer/AGENT.md",
+    "./agents/builder/AGENT.md",
+    "./agents/exploiter/AGENT.md",
+    "./agents/reporter/AGENT.md"
   ],
   "commands": [
     "./commands/"

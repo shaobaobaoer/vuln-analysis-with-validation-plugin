@@ -128,11 +128,11 @@ vuln-analysis/
 │   ├── poc-writer/              #   Step 4: PoC script patterns
 │   └── validate-*/              #   10 type-specific validators
 ├── agents/                      # Agent definitions (5 agents)
-│   ├── orchestrator.md          #   Pipeline coordinator (opus)
-│   ├── analyzer.md              #   Target + vuln analysis (opus)
-│   ├── builder.md               #   Environment setup (sonnet)
-│   ├── exploiter.md             #   PoC execution + retry (opus)
-│   └── reporter.md              #   Report generation (sonnet)
+│   ├── orchestrator/AGENT.md    #   Pipeline coordinator (opus)
+│   ├── analyzer/AGENT.md        #   Target + vuln analysis (opus)
+│   ├── builder/AGENT.md         #   Environment setup (sonnet)
+│   ├── exploiter/AGENT.md       #   PoC execution + retry (opus)
+│   └── reporter/AGENT.md        #   Report generation (sonnet)
 ├── templates/                   # Prompt templates (7 pipeline steps)
 ├── core/                        # Python framework
 │   ├── pipeline.py              #   Pipeline orchestrator

@@ -24,7 +24,7 @@ Execute PoC scripts against the Docker-containerized target and verify reproduct
    - Verify the target app responds correctly inside Docker (HTTP 200 or CLI executes)
    - If container is down, start it: `docker-compose up -d`
    - If app doesn't respond after container start, **abort** — do NOT proceed with broken environment
-2. Delegate to the `exploiter` agent (`agents/exploiter.md`)
+2. Delegate to the `exploiter` agent (`agents/exploiter/AGENT.md`)
 3. Execute each PoC from `workspace/poc_manifest.json` against `http://localhost:<docker_port>`
 4. For failures, enter retry loop (max 5 per vuln):
    - Diagnose: ENV_ISSUE / POC_BUG / PARAM_MISMATCH / TIMING / NOT_VULNERABLE

@@ -104,12 +104,12 @@ vuln-analysis/
 │   ├── validate-xss/SKILL.md             #   Validator: XSS
 │   └── validate-command-injection/SKILL.md
 │
-├── agents/                                # Agent definitions (flat .md files)
-│   ├── orchestrator.md                   #   Pipeline coordinator
-│   ├── analyzer.md                       #   Target + vuln analysis
-│   ├── builder.md                        #   Docker env builder
-│   ├── exploiter.md                      #   PoC execution + retry
-│   └── reporter.md                       #   Report generation
+├── agents/                                # Agent definitions (AGENT.md convention)
+│   ├── orchestrator/AGENT.md             #   Pipeline coordinator (opus)
+│   ├── analyzer/AGENT.md                 #   Target + vuln analysis (opus)
+│   ├── builder/AGENT.md                  #   Docker env builder (sonnet)
+│   ├── exploiter/AGENT.md                #   PoC execution + retry (opus)
+│   └── reporter/AGENT.md                 #   Report generation (sonnet)
 │
 ├── templates/                             # Prompt templates for pipeline steps
 │   ├── target_extraction.md
