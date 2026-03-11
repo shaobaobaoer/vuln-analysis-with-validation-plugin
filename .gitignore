@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -5,18 +6,38 @@ dist/
 build/
 .eggs/
 *.egg
+*.pyo
+venv/
+.venv/
 
+# Workspace (generated artifacts — never commit)
 workspace/
 /tmp/vuln-target/
 
+# Secrets
 .env
 .env.*
 *.secret
+credentials.json
+*.pem
+*.key
 
+# OS
 .DS_Store
+Thumbs.db
+
+# Editor / IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
+# Logs
 *.log
+
+# Docker (generated during runs)
+docker-compose.override.yml
+
+# PoC evidence (may contain sensitive data)
+evidence/

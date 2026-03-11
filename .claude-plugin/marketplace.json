@@ -1,0 +1,43 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "vuln-analysis",
+  "description": "Automated security vulnerability verification and exploitation pipeline for Claude Code",
+  "owner": {
+    "name": "jiunie"
+  },
+  "metadata": {
+    "description": "A Claude plugin that automates the full vulnerability analysis lifecycle: target extraction, environment setup (Docker/conda/venv), vulnerability scanning with 3-phase false positive filtering, PoC script generation, containerized reproduction with retry loops, type-specific validation, and comprehensive Markdown/JSON report delivery. Supports 10 vulnerability types including RCE, SSRF, path traversal, XSS, command injection, and more."
+  },
+  "plugins": [
+    {
+      "name": "vuln-analysis",
+      "source": "./",
+      "description": "Automated security vulnerability verification plugin",
+      "version": "1.0.0",
+      "author": {
+        "name": "jiunie"
+      },
+      "license": "MIT",
+      "keywords": [
+        "security",
+        "vulnerability",
+        "penetration-testing",
+        "exploit",
+        "cve",
+        "poc",
+        "docker",
+        "static-analysis",
+        "code-audit"
+      ],
+      "category": "security",
+      "tags": [
+        "security",
+        "vulnerability-analysis",
+        "penetration-testing",
+        "exploit-development",
+        "docker",
+        "code-audit"
+      ]
+    }
+  ]
+}

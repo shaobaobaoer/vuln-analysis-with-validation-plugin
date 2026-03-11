@@ -1,0 +1,33 @@
+{
+  "name": "vuln-analysis",
+  "version": "1.0.0",
+  "description": "Automated security vulnerability verification plugin for open-source libraries, web applications, and CLI tools. Runs a full 8-step pipeline: target extraction, environment setup, vulnerability analysis with false positive filtering, PoC generation, reproduction, retry loop, validation, and report delivery.",
+  "author": {
+    "name": "jiunie"
+  },
+  "license": "MIT",
+  "keywords": [
+    "security",
+    "vulnerability",
+    "penetration-testing",
+    "exploit",
+    "cve",
+    "poc",
+    "docker",
+    "static-analysis",
+    "code-audit"
+  ],
+  "agents": [
+    "./agents/orchestrator.md",
+    "./agents/analyzer.md",
+    "./agents/builder.md",
+    "./agents/exploiter.md",
+    "./agents/reporter.md"
+  ],
+  "commands": [
+    "./commands/"
+  ],
+  "skills": [
+    "./skills/"
+  ]
+}
