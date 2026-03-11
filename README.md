@@ -151,13 +151,30 @@ vuln-analysis/
     └── poc_manifest.example.json
 ```
 
-## Quick Start
+## Installation
 
-### Prerequisites
+### Via Claude Code Plugin (Recommended)
 
-- Docker and docker-compose installed
+```bash
+# Add the marketplace and install
+claude plugin marketplace add shaobaobaoer/vuln-analysis-with-validation-plugin
+claude plugin install vuln-analysis@vuln-analysis-with-validation-plugin
+```
+
+### Manual Installation
+
+```bash
+git clone https://github.com/shaobaobaoer/vuln-analysis-with-validation-plugin.git \
+    ~/.claude/plugins/vuln-analysis
+```
+
+### Runtime Dependencies
+
+- Docker and docker-compose
 - Python 3.12+
 - `pip install -r requirements.txt`
+
+## Quick Start
 
 ### Full Scan
 
