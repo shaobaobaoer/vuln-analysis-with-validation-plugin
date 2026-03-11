@@ -9,6 +9,26 @@ This is a Claude plugin for automated security vulnerability verification of ope
 - **Dependencies**: `requests` (only external dependency)
 - **Execution**: All testing runs in isolated Docker containers
 
+## Safety Invariants (NEVER violate)
+
+> These rules are absolute. No step, agent, or retry logic may override them.
+
+1. **Docker-only execution**: ALL PoC scripts, validators, and exploit code MUST execute against a Docker container. NEVER run any PoC script, exploit payload, or vulnerability test directly on the host machine. The only permitted target is `http://localhost:<port>` where the port is mapped from a running Docker container.
+
+2. **Mandatory Steps 1-3**: Steps 1 (Target Extraction), 2 (Environment Setup), and 3 (Vulnerability Analysis) are ALL mandatory. If any of these steps fail after retries, the pipeline MUST abort. There is no fallback, no skip, no "continue with user-provided data" for Steps 2 and 3.
+
+3. **Docker readiness gate**: Before ANY PoC execution (Step 4+), the Docker container MUST be verified to successfully run the target application. This means:
+   - The container is running (`docker ps` shows it up)
+   - The application inside responds correctly (HTTP 200 on the main endpoint, or CLI tool executes without error)
+   - The health check passes
+   - If the app does not work inside Docker, fix the Docker setup FIRST. Do NOT proceed to PoC generation/execution with a broken environment.
+
+4. **No host-side execution**: The following are FORBIDDEN on the host:
+   - Running `python3 poc_*.py` directly on the host
+   - Using `curl`/`wget` to exploit host-local services that are NOT Docker containers
+   - Executing any command injection, file write, or deserialization payload outside Docker
+   - The ONLY permitted host-side actions are: building Docker images, starting/stopping containers, and sending HTTP requests to Docker-exposed ports
+
 ## Critical Rules
 
 ### 1. Authorization
