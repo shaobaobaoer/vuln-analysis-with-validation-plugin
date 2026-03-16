@@ -16,14 +16,11 @@ Run the complete **9-step** vulnerability analysis pipeline against a GitHub rep
 
 ## Safety Rules
 
-- **Docker-only**: All PoC execution happens inside Docker containers. NEVER run exploits on the host.
-- **Docker is NON-NEGOTIABLE**: If Docker daemon is not accessible, the pipeline MUST abort. NEVER fall back to local venv, pip, or conda.
-- **All Python inside Docker**: ALL Python execution (PoC scripts, validators, helpers) MUST run inside the Docker container via `docker exec`. NEVER invoke `python3` on the host.
-- **Use `uv`**: All Python dependency management uses `uv` (never pip/conda/venv directly).
-- **Steps 1-4 are mandatory**: If any of Target Extraction, Environment Setup, Docker Readiness Gate, or Vulnerability Analysis fails, the pipeline aborts.
-- **Docker readiness gate**: The target app must be verified working inside Docker before any PoC execution begins.
-- **No auto-fix**: The pipeline never modifies the target project's source code. The retry loop only fixes PoC scripts and Docker setup.
-- **Sub-agent delegation**: The orchestrator MUST delegate all specialized work to sub-agents (analyzer, builder, exploiter, reporter). It MUST NOT perform target analysis, Dockerfile generation, vulnerability scanning, PoC writing, PoC execution, or report generation itself.
+> See `CLAUDE.md §Safety Invariants` for the full 8 rules.
+
+- **Docker-only**: All execution inside Docker. If Docker is unavailable, pipeline MUST abort.
+- **Steps 1-4 are mandatory**: Pipeline aborts if any fails.
+- **Sub-agent delegation**: The orchestrator MUST delegate to sub-agents (analyzer, builder, exploiter, reporter) — never perform specialized work itself.
 
 ## Pipeline (EXACTLY 9 steps — not 8, not 7)
 

@@ -115,19 +115,13 @@ def validate(result):
 
 **FORBIDDEN library PoC patterns:**
 ```python
-# FORBIDDEN — loading module from host filesystem path
+# FORBIDDEN — loading from host path or referencing host filesystem
 import importlib.util
-spec = importlib.util.spec_from_file_location(
-    'python_utils',
-    '/mnt/ecs-user/analysis/keras/workspace/repo/keras/src/utils/python_utils.py'  # HOST PATH!
-)
+spec = importlib.util.spec_from_file_location('module', '/mnt/ecs-user/...')  # HOST PATH!
+MARKER_FILE = '/mnt/ecs-user/analysis/.../vuln001.txt'  # HOST PATH!
 
-# FORBIDDEN — referencing host paths
-MARKER_FILE = '/mnt/ecs-user/analysis/keras/workspace/markers/vuln001.txt'
-
-# CORRECT — use normal import (library installed in Docker container)
+# CORRECT — normal import + container-internal paths
 import keras
-from keras.src.utils import python_utils
 MARKER_FILE = '/tmp/vuln_rce_001_marker.txt'
 ```
 

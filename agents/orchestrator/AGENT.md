@@ -315,28 +315,6 @@ For each step, the orchestrator MUST:
 4. **Validate output**: Run inter-step validation (see below) to confirm output file exists and is well-formed
 5. **Update state**: Set the step status to `completed` or `failed`, record `completed_at`, and advance `current_step`
 
-### Agent Invocation Examples
-
-**Step 1 — Target Extraction:**
-```
-Agent(agent="analyzer", prompt="Extract target information from the repository at <repo_url>. Clone the repo into workspace/repo/. Analyze the codebase and produce workspace/target.json containing: language, framework, entry_points, dependencies, and attack_surface.")
-```
-
-**Step 4 — Vulnerability Analysis:**
-```
-Agent(agent="analyzer", prompt="Analyze the source code in workspace/repo/ using the target profile in workspace/target.json. Identify all candidate vulnerabilities. ONLY output vulnerabilities of the 6 supported types: rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection. Map 'path traversal' to 'arbitrary_file_rw', 'code injection'/'template injection' to 'rce'. Exclude types not in this list. For EACH finding, assess entry point reachability: trace backward from the vulnerable code to a public entry point listed in target.json entry_points[]. EXCLUDE any finding with reachability = 'not_reachable'. Include the entry_point object (type, path, access_level, reachability, call_chain) in each vulnerability. Output workspace/vulnerabilities.json.")
-```
-
-**Steps 5+7+8 — PoC Generation + Reproduction + Validation + Retry:**
-```
-Agent(agent="exploiter", prompt="Generate PoC scripts for each vulnerability in workspace/vulnerabilities.json. Name scripts as poc_<type>_<NNN>.py (e.g., poc_rce_001.py). All scripts MUST accept --target and --timeout CLI args. Place scripts in workspace/poc_scripts/. Set up validation infrastructure per templates/validation_framework.md (deploy trigger binary, start TCP listeners, set up inotifywait). Execute each PoC in the running container via docker exec. Run legitimacy check (anti-cheat) on each PoC source. Run type-specific validation. For any [FAILED] result, retry up to 5 times with adjustments (re-initialize monitors each retry, 2 min max per attempt). Record results in workspace/results.json with outcomes: [SUCCESS], [FAILED], or [INVALID].")
-```
-
-**Step 9 — Report:**
-```
-Agent(agent="reporter", prompt="Generate the final vulnerability analysis report. Read workspace/target.json, workspace/vulnerabilities.json, and workspace/results.json. Produce workspace/report/REPORT.md (human-readable) and workspace/report/summary.json (machine-readable). Include only confirmed vulnerabilities with their evidence.")
-```
-
 ## Error Handling
 
 - Step 1 failure → **Pipeline abort** (no target metadata = nothing to do)
@@ -384,55 +362,13 @@ Within the 30-minute combined budget for Steps 7-8:
 
 ## Resume and Restart Logic
 
-### Resume (default behavior on re-invocation)
-
-When the orchestrator is invoked and `workspace/pipeline_state.json` already exists:
-
-1. Read the existing `pipeline_state.json`
-2. Check `overall_status`:
-   - If `completed`: inform the user the pipeline already finished and offer to restart
-   - If `aborted`: inform the user and offer to restart
-   - If `running` or `failed`: proceed with resume logic
-3. Iterate through steps in order (1 through 9):
-   - **`completed`**: Skip entirely — do not re-execute
-   - **`skipped`**: Skip entirely — do not re-execute
-   - **`failed`**: Re-execute from this step (reset status to `pending` first, reset `retries` to 0)
-   - **`running`**: Treat as interrupted — reset to `pending` and re-execute
-   - **`pending`**: Execute normally
-4. Continue the pipeline from the first non-completed/non-skipped step
-
-### Restart (explicit `--restart` flag)
-
-When the user provides the `--restart` flag:
-
-1. **Clean up old pipeline resources** — run the safe cleanup procedure (§Docker Resource Cleanup) using the old `pipeline_id` from the existing state file
-2. Reset all step statuses to `pending`
-3. Clear all `started_at`, `completed_at`, `error` fields
-4. Reset all `retries` to 0
-5. Set `current_step` to 1
-6. Set `overall_status` to `running`
-7. Generate a new `pipeline_id`
-8. Update `started_at` at the pipeline level to the current timestamp
-9. Set `completed_at` to null
-10. Begin execution from Step 1
-
-### Start-Step Override (`--start-step N`)
-
-The `--start-step N` flag allows jumping directly to step N:
-
-1. Validate that N is between 1 and 9
-2. For all steps before N, verify their status is `completed`:
-   - If any prerequisite step is not `completed`, abort with error: `"Cannot start at step <N>: step <M> has not completed successfully"`
-3. Set steps N through 9 to `pending` (reset any previous failed/running state)
-4. Set `current_step` to N
-5. Begin execution from step N
-
-### State File Not Found
-
-If `workspace/pipeline_state.json` does not exist, treat this as a fresh run:
-- Create a new state file with all steps set to `pending`
-- Generate a new `pipeline_id` (use `uuidgen` or bash, NOT python3)
-- Begin from Step 1
+| Scenario | Behavior |
+|---|---|
+| **State file exists, `completed`/`aborted`** | Inform user, offer restart |
+| **State file exists, `running`/`failed`** | Resume from first non-completed step. Reset `failed`/`running` steps to `pending`. |
+| **`--restart` flag** | Clean up old resources (§Docker Resource Cleanup), reset all steps, generate new `pipeline_id`, start from Step 1 |
+| **`--start-step N`** | Verify steps 1 to N-1 are `completed`, reset steps N-9 to `pending`, begin at N |
+| **No state file** | Fresh run — create state file, generate `pipeline_id` (use `uuidgen`, NOT python3), begin Step 1 |
 
 ## Inter-Step Validation
 
@@ -467,62 +403,7 @@ For each step, after the sub-agent signals completion:
    - Record the validation error
    - Apply the standard error handling rules for that step (abort, retry, continue, etc.)
 
-### JSON Validation (use jq, NOT python3)
-
-```bash
-# Validate JSON structure
-jq '.' workspace/target.json > /dev/null 2>&1 && echo "valid" || echo "invalid"
-
-# Check required keys
-jq -e '.language and .framework and .entry_points' workspace/target.json > /dev/null 2>&1
-
-# Check vulnerability types are valid (ONLY these 6 types allowed)
-jq -e '.vulnerabilities | all(.type; . == "rce" or . == "ssrf" or . == "insecure_deserialization" or . == "arbitrary_file_rw" or . == "dos" or . == "command_injection")' workspace/vulnerabilities.json > /dev/null 2>&1
-
-# Check NO unsupported types leaked through (explicit rejection)
-jq -e '[.vulnerabilities[].type] | all(. != "sql_injection" and . != "xxe" and . != "auth_bypass" and . != "path_traversal" and . != "xss" and . != "idor" and . != "lfi")' workspace/vulnerabilities.json > /dev/null 2>&1
-
-# Check entry point reachability exists and is valid
-jq -e '.vulnerabilities | all(.entry_point.reachability; . == "reachable" or . == "conditional")' workspace/vulnerabilities.json > /dev/null 2>&1
-
-# Check confidence scores are all >= 7
-jq -e '.vulnerabilities | all(.confidence; . >= 7)' workspace/vulnerabilities.json > /dev/null 2>&1
-
-# Check PoC script naming convention (after Step 5)
-ls workspace/poc_scripts/poc_*.py | while read f; do
-  basename "$f" | grep -qE '^poc_(rce|ssrf|insecure_deserialization|arbitrary_file_rw|dos|command_injection)_[0-9]{3}\.py$' || echo "INVALID NAME: $f"
-done
-
-# Check PoC scripts have --target and --timeout args (after Step 5)
-for f in workspace/poc_scripts/poc_*.py; do
-  grep -q -- '--target' "$f" && grep -q -- '--timeout' "$f" || echo "MISSING CLI ARGS: $f"
-done
-
-# Check Docker resource labeling
-docker ps --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" --format '{{.Names}}' | grep -q . || echo "WARNING: No labeled containers found"
-
-# Verify ENVIRONMENT_SETUP.md was generated (after Step 2)
-test -f "${PROJECT_DIR}/ENVIRONMENT_SETUP.md" || echo "MISSING: ENVIRONMENT_SETUP.md"
-
-# Verify Dockerfile uses uv, not pip (after Step 2)
-grep -q 'pip install' workspace/Dockerfile && ! grep -q 'uv pip install' workspace/Dockerfile && echo "VIOLATION: Dockerfile uses pip instead of uv"
-```
-
-**IMPORTANT**: NEVER run `python3` directly on the host. Use `jq` for JSON validation on the host side. If you need Python-based validation, run it via `docker exec`. NEVER use `python3 -c` for pipeline state updates — use `jq` instead.
-
-### Host-Side Python Prohibition (Explicit Examples)
-
-The following are FORBIDDEN on the host:
-```bash
-# FORBIDDEN — never use python3 for JSON manipulation
-python3 -c "import json; ..."
-python3 -c "print(json.dumps(...))"
-python3 some_script.py
-
-# CORRECT — use jq for all JSON operations on the host
-jq '.current_step = 4' pipeline_state.json > tmp.json && mv tmp.json pipeline_state.json
-jq '.steps["4_vulnerability_analysis"].status = "running"' pipeline_state.json | sponge pipeline_state.json
-```
+Use `jq` for ALL JSON validation on the host — NEVER `python3`. See `CLAUDE.md §Safety Invariants` for the full host-side Python prohibition.
 
 ## Mandatory Pre-Flight Checklists (GATE — must pass before advancing)
 
@@ -570,33 +451,7 @@ All Docker resources created by the pipeline are labeled with `vuln-analysis.pip
 
 ### Label Convention
 
-The `pipeline_id` from `pipeline_state.json` (e.g., `vuln-a1b2c3d4`) is used as the label value. The builder agent MUST apply this label to all resources it creates.
-
-**How labels are applied**:
-```dockerfile
-# Dockerfile — build-time label (injected via --build-arg or --label)
-LABEL vuln-analysis.pipeline-id="vuln-a1b2c3d4"
-```
-```bash
-# docker build — pass label at build time
-docker build --label "vuln-analysis.pipeline-id=${PIPELINE_ID}" -t "vuln-${PIPELINE_ID}-target" .
-
-# docker run — pass label at run time
-docker run --label "vuln-analysis.pipeline-id=${PIPELINE_ID}" --name "vuln-${PIPELINE_ID}-app" ...
-```
-```yaml
-# docker-compose.yml — label in service definition
-services:
-  app:
-    labels:
-      vuln-analysis.pipeline-id: "${PIPELINE_ID}"
-    networks:
-      - vuln-net
-networks:
-  vuln-net:
-    labels:
-      vuln-analysis.pipeline-id: "${PIPELINE_ID}"
-```
+The `pipeline_id` from `pipeline_state.json` (e.g., `vuln-a1b2c3d4`) is used as the label value. The builder agent MUST apply label `vuln-analysis.pipeline-id=${PIPELINE_ID}` to all Docker resources (via `docker build --label`, `docker run --label`, and docker-compose `labels:`).
 
 ### Safe Cleanup Procedure
 
@@ -620,17 +475,7 @@ docker volume ls -q --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | 
 echo "Cleanup complete for pipeline ${PIPELINE_ID}"
 ```
 
-### FORBIDDEN Cleanup Commands
-
-These commands are **too aggressive** — they destroy resources belonging to other pipelines or other users:
-
-```bash
-docker system prune              # Kills ALL unused resources system-wide
-docker container prune           # Kills ALL stopped containers
-docker image prune -a            # Kills ALL unused images
-docker rm -f $(docker ps -aq)    # Kills ALL containers indiscriminately
-docker-compose down --rmi all    # Removes images that may be shared by other runs
-```
+**FORBIDDEN**: `docker system prune`, `docker container prune`, `docker image prune -a`, `docker rm -f $(docker ps -aq)` — these destroy resources from other pipelines/users.
 
 ### When to Clean Up
 

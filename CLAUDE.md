@@ -59,28 +59,21 @@ This is a Claude plugin for automated security vulnerability verification of ope
 - This tool is for authorized pentesting, CTFs, and security research only
 
 ### 2. Code Style
-- Python 3.12+ with type hints
-- Follow PEP 8 conventions
-- Minimal dependencies (standard library + `requests` only)
-- Each PoC script must be independently runnable
-- All scripts must include timeout control (default: 30s)
+- Python 3.12+ with type hints, PEP 8, minimal deps (standard library + `requests`)
 - All Python scripts execute inside Docker — never on the host
 - Use `uv` for all Python dependency management (never pip/conda directly)
 
 ### 3. PoC Script Convention
-- Naming: `poc_<vuln_type>_<id>.py`
+> See `skills/poc-writer/SKILL.md` for full naming rules, patterns, and anti-patterns.
+- Naming: `poc_<vuln_type>_<NNN>.py` (3-digit zero-padded)
 - CLI args: `--target` (default `http://localhost:8080`), `--timeout` (default 30)
 - Exit codes: 0 = CONFIRMED, 1 = NOT_REPRODUCED, 2 = ERROR
-- Output: `[CONFIRMED]`, `[NOT_REPRODUCED]`, `[PARTIAL]`, `[ERROR]` with vuln ID
-- Must use unique markers to avoid false positives
+- Output markers: `[CONFIRMED]`, `[NOT_REPRODUCED]`, `[PARTIAL]`, `[ERROR]`
 
 ### 4. Environment Setup Convention
-- Auto-detect tech stack before building (Docker Compose > Dockerfile > manual setup)
-- **Python package management: always use `uv`** (never pip/conda/venv directly)
-- Database provisioning via Docker containers (PostgreSQL, MySQL, Redis, MongoDB)
-- All Dockerfiles must include HEALTHCHECK
-- All Dockerfiles for Python projects must install `uv` and use it for dependency management
-- Use `setup_` prefix for auto-created environments; never delete user environments
+> See `skills/environment-builder/SKILL.md` for full modular setup workflow.
+- Auto-detect tech stack (Docker Compose > Dockerfile > manual setup)
+- Use `uv` for Python deps; all Dockerfiles must include HEALTHCHECK
 - Mandatory: write `ENVIRONMENT_SETUP.md` after every environment build
 
 ### 5. Docker Resource Labeling & Cleanup
