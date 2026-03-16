@@ -10,7 +10,7 @@ Confirm whether a vulnerability can make the service unavailable through a **sin
 
 ## When to Activate
 
-- A DoS vulnerability needs validation during reproduction (Step 5/7)
+- A DoS vulnerability needs validation during reproduction (Step 7/8)
 
 ## Prerequisites (set up before PoC execution)
 

@@ -175,6 +175,17 @@ Execute loaded sub-modules in order:
 3. Wait for databases to be ready
 4. Build application (`app/*.md`)
 
+**Python Dependency Management (MANDATORY for all Python projects)**:
+- ALL generated Dockerfiles MUST use `uv` for dependency installation
+- NEVER use `pip install`, `conda install`, or `python -m venv` in Dockerfiles
+- Install uv: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- Install deps: `uv pip install --system -r requirements.txt`
+- If `pyproject.toml` exists: `uv sync`
+
+**Docker Resource Labeling (MANDATORY)**:
+- ALL `docker build` and `docker run` commands MUST include `--label "vuln-analysis.pipeline-id=${PIPELINE_ID}"`
+- Docker Compose files MUST include `labels:` section in all services and networks
+
 ---
 
 ## Step 4: Verify

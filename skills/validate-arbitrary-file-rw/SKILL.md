@@ -10,7 +10,7 @@ Confirm whether a vulnerability allows reading or writing files at arbitrary ser
 
 ## When to Activate
 
-- An arbitrary file R/W vulnerability needs validation during reproduction (Step 5/7)
+- An arbitrary file R/W vulnerability needs validation during reproduction (Step 7/8)
 
 ## Prerequisites (set up before PoC execution)
 

@@ -10,7 +10,7 @@ Confirm whether a vulnerability allows injecting and executing arbitrary OS comm
 
 ## When to Activate
 
-- A command injection vulnerability needs validation during reproduction (Step 5/7)
+- A command injection vulnerability needs validation during reproduction (Step 7/8)
 
 ## Prerequisites (set up before PoC execution)
 

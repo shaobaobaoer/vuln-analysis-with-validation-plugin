@@ -10,7 +10,7 @@ Confirm whether a vulnerability allows code execution through malicious serializ
 
 ## When to Activate
 
-- An insecure deserialization vulnerability needs validation during reproduction (Step 5/7)
+- An insecure deserialization vulnerability needs validation during reproduction (Step 7/8)
 
 ## Prerequisites (set up before PoC execution)
 

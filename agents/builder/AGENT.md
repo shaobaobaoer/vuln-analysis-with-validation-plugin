@@ -46,6 +46,21 @@ networks:
       vuln-analysis.pipeline-id: "${PIPELINE_ID}"
 ```
 
+## Docker is MANDATORY (NEVER fall back to local environments)
+
+The builder MUST produce a working Docker environment. If Docker is not accessible (`docker: command not found`, `Cannot connect to Docker daemon`, etc.), the builder MUST:
+1. Report the error to the orchestrator
+2. Return a failure status — NOT attempt any local fallback
+
+**FORBIDDEN local fallbacks** (the builder MUST NEVER do these):
+- `python3 -m venv` / `virtualenv` on the host
+- `pip install` on the host
+- `conda create` on the host
+- Running the target app directly on the host
+- Any non-Docker environment setup
+
+The orchestrator will abort the pipeline if Step 2 fails. This is the correct behavior.
+
 ## Your Role
 
 - Auto-detect project tech stack (language, framework, databases)
@@ -95,11 +110,40 @@ Only load the sub-modules needed for this project.
 3. Wait for databases to be ready
 4. Build application (`app/*.md`)
 
+**Python Dependency Management (MANDATORY)**:
+- ALL Dockerfiles for Python projects MUST use `uv` for dependency installation
+- NEVER use `pip install`, `conda install`, or `python -m venv` in Dockerfiles
+- Use `uv pip install --system -r requirements.txt` instead of `pip install -r requirements.txt`
+- Use `uv sync` if the project has `pyproject.toml`
+- Install `uv` in the Dockerfile: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+
+**ANTI-PATTERNS (FORBIDDEN in generated Dockerfiles)**:
+```dockerfile
+# FORBIDDEN — NEVER use these in Dockerfiles
+RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install flask requests
+RUN python -m venv /opt/venv
+RUN conda install ...
+
+# CORRECT — Always use uv
+RUN uv pip install --system -r requirements.txt
+RUN uv pip install --system flask requests
+RUN uv sync  # if pyproject.toml exists
+```
+
+**Docker Resource Labeling (MANDATORY)**:
+- The orchestrator provides `PIPELINE_ID` — apply it to ALL resources
+- Build: `docker build --label "vuln-analysis.pipeline-id=${PIPELINE_ID}" ...`
+- Run: `docker run --label "vuln-analysis.pipeline-id=${PIPELINE_ID}" ...`
+- Compose: Add `labels:` section to all services and networks
+
 ### Step 4: Verify
 Run `scripts/health_check.sh` — outputs READY / PARTIAL / FAILED.
 
-### Step 5: Document (MANDATORY)
+### Step 5: Document (MANDATORY — NEVER skip)
 Write `${PROJECT_DIR}/ENVIRONMENT_SETUP.md` using `output/status-output.md` template.
+**This step is NOT optional.** The orchestrator will check for this file's existence as part of inter-step validation. If it is missing, the step is considered FAILED.
 
 ## Output
 

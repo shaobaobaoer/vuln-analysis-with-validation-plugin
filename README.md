@@ -20,6 +20,74 @@ This plugin automates the full vulnerability analysis lifecycle through a **9-st
 
 **Abort conditions**: Steps 1-4 are mandatory. If any fails, the pipeline aborts.
 
+## Pipeline Flow
+
+```mermaid
+flowchart TD
+    START(["/vuln-scan &lt;repo-url&gt;"]) --> S1
+
+    subgraph MANDATORY["🔒 Mandatory Phase — abort on failure"]
+        direction TB
+        S1["<b>Step 1: Target Extraction</b><br/>🔍 analyzer · opus<br/>Clone repo → detect type → enumerate entry points<br/>→ <code>target.json</code>"]
+        S1 -->|"✅ success"| S2
+        S1 -->|"❌ fail"| ABORT
+
+        S2["<b>Step 2: Environment Setup</b><br/>🔧 builder · sonnet<br/>Auto-detect stack → build Docker container<br/>→ <code>Dockerfile</code> + <code>docker-compose.yml</code>"]
+        S2 -->|"✅ success"| S3
+        S2 -->|"❌ fail"| ABORT
+
+        S3{"<b>Step 3: Docker Readiness Gate</b><br/>Container up? App healthy?"}
+        S3 -->|"✅ healthy"| S4
+        S3 -->|"⚠️ unhealthy"| FIX["Fix Docker setup"]
+        FIX --> S3
+        S3 -->|"❌ max retries"| ABORT
+
+        S4["<b>Step 4: Vulnerability Analysis</b><br/>🔍 analyzer · opus<br/>CVE lookup + static analysis + entry point reachability<br/>+ 3-phase false positive filtering<br/>→ <code>vulnerabilities.json</code>"]
+        S4 -->|"✅ findings > 0"| S5
+        S4 -->|"❌ fail"| ABORT
+        S4 -->|"0 findings"| CLEAN
+    end
+
+    ABORT(["❌ Pipeline Abort"])
+    CLEAN(["✅ No Vulnerabilities Found"])
+
+    subgraph EXPLOIT["⚔️ Exploitation Phase — per vulnerability"]
+        direction TB
+        S5["<b>Step 5: PoC Generation</b><br/>⚔️ exploiter · opus<br/>Write exploit scripts via correct entry points<br/>→ <code>poc_scripts/</code> + <code>poc_manifest.json</code>"]
+        S5 --> S6
+
+        S6["<b>Step 6: Environment Init</b><br/>Deploy trigger binary · start TCP listeners<br/>Set up file monitors (<code>inotifywait</code>)"]
+        S6 --> S7
+
+        S7["<b>Step 7: Reproduction + Validation</b><br/>Execute PoC → legitimacy check (anti-cheat)<br/>→ type-specific validation<br/>→ <code>results.json</code>"]
+        S7 --> S8
+
+        S8{"<b>Step 8: Retry?</b><br/>retries &lt; 5?"}
+        S8 -->|"✅ CONFIRMED"| NEXT
+        S8 -->|"⚠️ fail · retries &lt; 5"| DIAG["Diagnose & fix PoC<br/>Re-initialize monitors"]
+        DIAG --> S7
+        S8 -->|"❌ MAX_RETRIES<br/>or NOT_VULNERABLE"| NEXT
+
+        NEXT{"More vulns?"}
+        NEXT -->|"yes"| S6
+        NEXT -->|"no"| S9
+    end
+
+    subgraph REPORT["📝 Reporting Phase"]
+        S9["<b>Step 9: Report</b><br/>📝 reporter · sonnet<br/>Executive summary + per-vuln details<br/>+ reproduction steps + remediation<br/>→ <code>REPORT.md</code> + <code>summary.json</code>"]
+    end
+
+    S9 --> CLEANUP["🧹 Docker Cleanup<br/>(label-based)"]
+    CLEANUP --> DONE(["✅ Pipeline Complete"])
+
+    style MANDATORY fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style EXPLOIT fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style REPORT fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style ABORT fill:#ffebee,stroke:#c62828
+    style CLEAN fill:#e8f5e9,stroke:#2e7d32
+    style DONE fill:#e8f5e9,stroke:#2e7d32
+```
+
 ## Key Features
 
 ### Entry Point Reachability

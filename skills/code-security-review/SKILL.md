@@ -20,7 +20,7 @@ origin: vuln-analysis
 ## When to Activate
 
 - Full security audit of a codebase is needed
-- The `/vuln-scan` pipeline reaches Step 3 (Vulnerability Analysis)
+- The `/vuln-scan` pipeline reaches Step 4 (Vulnerability Analysis)
 - User requests code security review, audit, or vulnerability assessment
 - Static analysis findings need false positive filtering
 

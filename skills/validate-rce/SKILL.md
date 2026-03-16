@@ -10,7 +10,7 @@ Confirm whether a vulnerability allows arbitrary code execution on the server by
 
 ## When to Activate
 
-- An RCE vulnerability needs validation during reproduction (Step 5/7)
+- An RCE vulnerability needs validation during reproduction (Step 7/8)
 
 ## Prerequisites (set up before PoC execution)
 
