@@ -17,9 +17,9 @@ This is a Claude plugin for automated security vulnerability verification of ope
 
 1. **Docker-only execution**: ALL PoC scripts, validators, and exploit code MUST execute against a Docker container. NEVER run any PoC script, exploit payload, or vulnerability test directly on the host machine. The only permitted target is `http://localhost:<port>` where the port is mapped from a running Docker container.
 
-2. **Mandatory Steps 1-3**: Steps 1 (Target Extraction), 2 (Environment Setup), and 3 (Vulnerability Analysis) are ALL mandatory. If any of these steps fail after retries, the pipeline MUST abort. There is no fallback, no skip, no "continue with user-provided data" for Steps 2 and 3.
+2. **Mandatory Steps 1-4**: Steps 1 (Target Extraction), 2 (Environment Setup), 3 (Docker Readiness Gate), and 4 (Vulnerability Analysis) are ALL mandatory. If any of these steps fail after retries, the pipeline MUST abort. There is no fallback, no skip, no "continue with user-provided data" for these steps.
 
-3. **Docker readiness gate**: Before ANY PoC execution (Step 4+), the Docker container MUST be verified to successfully run the target application. This means:
+3. **Docker readiness gate (Step 3)**: Before ANY vulnerability analysis or PoC execution (Step 4+), the Docker container MUST be verified to successfully run the target application. This means:
    - The container is running (`docker ps` shows it up)
    - The application inside responds correctly (HTTP 200 on the main endpoint, or CLI tool executes without error)
    - The health check passes
@@ -42,6 +42,14 @@ This is a Claude plugin for automated security vulnerability verification of ope
    - Install deps: `uv pip install -r requirements.txt`
    - Run scripts: `uv run python script.py`
    - Sync project: `uv sync` (if pyproject.toml exists)
+
+8. **Local-only Docker builds**: Docker images are built locally from base images for testing purposes ONLY. The following are FORBIDDEN:
+   - `docker push` to any registry (docker.io, ghcr.io, ECR, ACR, etc.)
+   - `docker tag` for the purpose of preparing a push
+   - `docker login` to any registry
+   - `docker save` / `docker export` for distribution
+   - Any action that packages or uploads the built image outside the local machine
+   - The pipeline ONLY builds images locally via `docker build` and runs them via `docker run` / `docker-compose up`. Built images are ephemeral testing artifacts, not distributable packages.
 
 ## Critical Rules
 
@@ -146,10 +154,10 @@ vuln-analysis/
 ├── skills/                      # Skill modules (11 skills)
 │   ├── target-extraction/       #   Step 1: target analysis
 │   ├── environment-builder/     #   Step 2: modular env setup (app/ db/ helpers/ scripts/)
-│   ├── vulnerability-scanner/   #   Step 3: vuln discovery with integrated filtering
+│   ├── vulnerability-scanner/   #   Step 4: vuln discovery with integrated filtering
 │   ├── code-security-review/    #   3-phase code audit (with resources/)
-│   ├── poc-writer/              #   Step 4: PoC script patterns
-│   └── validate-*/              #   6 type-specific validators
+│   ├── poc-writer/              #   Step 5: PoC script patterns
+│   └── validate-*/              #   6 type-specific validators (Steps 7-8)
 ├── agents/                      # Agent definitions (5 agents)
 │   ├── orchestrator/AGENT.md    #   Pipeline coordinator (opus)
 │   ├── analyzer/AGENT.md        #   Target + vuln analysis (opus)

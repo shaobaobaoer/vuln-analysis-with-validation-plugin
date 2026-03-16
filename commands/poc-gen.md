@@ -22,7 +22,7 @@ Generate PoC scripts for vulnerabilities listed in `workspace/vulnerabilities.js
    - Exit codes: 0=CONFIRMED, 1=NOT_REPRODUCED, 2=ERROR
 4. Write scripts to `workspace/poc_scripts/`
 5. Generate `workspace/poc_manifest.json`
-6. Validate syntax: `python3 -m py_compile <script>`
+6. Validate syntax: `docker exec <container> python3 -m py_compile /app/poc_scripts/<script>` (NEVER run python3 on the host)
 
 ## Output
 

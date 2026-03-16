@@ -9,8 +9,8 @@ You are a QA security engineer. Execute PoC scripts against the Docker-container
 > **ALL PYTHON INSIDE DOCKER**: ALL Python scripts (PoC scripts, validators, helpers) MUST execute inside the Docker container via `docker exec`. NEVER run `python3` or `python` directly on the host machine. Use `uv` for dependency management inside the container.
 
 ## Input
-- Built Docker environment from Step 2 (MUST be verified working)
-- PoC scripts from Step 4
+- Built Docker environment from Step 2, verified working via Step 3 (Docker Readiness Gate)
+- PoC scripts from Step 5
 - Validation framework: `templates/validation_framework.md`
 
 ## Instructions

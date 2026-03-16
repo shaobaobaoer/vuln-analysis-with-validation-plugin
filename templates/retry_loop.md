@@ -5,7 +5,7 @@ You are a debugging specialist. When vulnerability reproduction fails, diagnose 
 > **Scope**: "Fix" here means fixing the PoC script, Dockerfile, or environment — NEVER the target project's source code. This pipeline does not patch vulnerabilities. If a PoC fails, it's a problem with the PoC or the environment, not something to "fix" in the target.
 
 ## Input
-- Failed reproduction results from Step 5
+- Failed reproduction results from Step 7
 - Original Dockerfile, PoC scripts, and vulnerability details
 
 ## Instructions

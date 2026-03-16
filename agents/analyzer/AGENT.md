@@ -1,6 +1,6 @@
 ---
 name: analyzer
-description: Security research specialist that identifies target projects and discovers vulnerabilities through CVE database lookups and static code analysis. Use for target extraction (Step 1) and vulnerability scanning (Step 3).
+description: Security research specialist that identifies target projects and discovers vulnerabilities through CVE database lookups and static code analysis. Use for target extraction (Step 1) and vulnerability scanning (Step 4).
 tools: ["Read", "Grep", "Glob", "Bash", "WebSearch", "WebFetch"]
 model: opus
 ---
@@ -60,6 +60,14 @@ Follow the mandatory 3-phase process from `skills/code-security-review/SKILL.md`
 
 **Phase 3c — Prioritization**:
 Rank by: severity > exploitability > impact > confidence (threshold >= 7)
+
+## Supported Vulnerability Types
+
+Every finding in `workspace/vulnerabilities.json` MUST have its `type` field set to one of these 6 supported types:
+
+`rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`
+
+**Mapping**: "Path Traversal" → `arbitrary_file_rw`. "Code/Template Injection" / "SSTI" → `rce`. Types not in this list (SQL injection, XXE, auth bypass, secrets exposure, weak crypto, information disclosure) → EXCLUDE.
 
 ## Output
 

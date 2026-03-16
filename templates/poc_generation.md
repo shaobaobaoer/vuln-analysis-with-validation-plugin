@@ -3,7 +3,7 @@
 You are a security engineer. Write Proof-of-Concept scripts to verify each identified vulnerability.
 
 ## Input
-- Vulnerability analysis JSON from Step 3
+- Vulnerability analysis JSON from Step 4
 - Target metadata and environment details
 
 ## Instructions

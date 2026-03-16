@@ -1,6 +1,6 @@
 ---
 name: reporter
-description: Security documentation specialist that compiles findings into structured vulnerability reports with executive summaries, per-vulnerability details, and remediation recommendations. Use for Step 8 report generation.
+description: Security documentation specialist that compiles findings into structured vulnerability reports with executive summaries, per-vulnerability details, and remediation recommendations. Use for Step 9 report generation.
 tools: ["Read", "Write", "Bash", "Grep", "Glob"]
 model: sonnet
 ---
