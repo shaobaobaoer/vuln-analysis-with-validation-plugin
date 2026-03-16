@@ -177,6 +177,45 @@ docker-compose down -v --rmi all # Removes images that may be shared
 
 rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection
 
+## Entry Point Reachability (MANDATORY)
+
+A vulnerability is only valid if an attacker can **reach** it through a public entry point. Every finding MUST include reachability assessment — findings with no reachable entry point are excluded.
+
+### Entry Point Types by Target
+
+| Target Type | Valid Entry Points | Invalid (Exclude) |
+|-------------|-------------------|-------------------|
+| **Library** | Public API: `import lib; lib.func()`, `lib.Class()`, `lib.Class.method()`, `lib.Class.static_method()` | Private functions (`_func`, `__func`), internal modules (`_internal/`), test files, dead code with no public caller |
+| **Web App** | HTTP endpoints: routes, API endpoints, WebSocket handlers | Internal helpers not connected to any route, middleware internals with no user input path |
+| **CLI Tool** | CLI commands and arguments reachable from the entry point binary | Internal functions not reachable from CLI argument parsing |
+
+### Library Entry Point Rules (Language-Specific)
+
+**Python**: Public = no leading underscore. `lib.func()`, `lib.Class()`, `obj.method()`, `Class.classmethod()`, `Class.staticmethod()`. Private = `_func`, `__func`, anything in `_internal/` or `_utils/` not re-exported in `__init__.py`.
+
+**JavaScript/TypeScript**: Public = exported from package entry point (`main`/`exports` in `package.json`). Private = non-exported functions, internal modules.
+
+**Go**: Public = capitalized identifiers (`lib.Function()`, `lib.Type{}`). Private = lowercase identifiers.
+
+**Java**: Public = `public` access modifier. Private = `private`, `protected`, package-private.
+
+### Reachability Assessment
+
+For each vulnerability found, the analyzer MUST trace a call path from an entry point to the vulnerable code:
+
+| Reachability | Meaning | Action |
+|-------------|---------|--------|
+| `reachable` | Clear path from public entry point → vulnerable code | **KEEP** — valid finding |
+| `conditional` | Path exists but requires auth/admin/special config | **KEEP** — note the condition |
+| `not_reachable` | No path from any public entry point | **EXCLUDE** — not exploitable |
+
+### PoC Entry Point Rules
+
+PoC scripts MUST exploit through the correct entry point:
+- **Library**: PoC imports the library and calls public API functions (e.g., `import sample_lib; sample_lib.parse(malicious_input)`)
+- **Web App**: PoC sends HTTP requests to exposed endpoints (e.g., `requests.post(f"{target}/api/exec", json=payload)`)
+- **CLI Tool**: PoC invokes the CLI binary with crafted arguments (e.g., `subprocess.run(["tool", "--input", malicious_file])`)
+
 ## Code Security Review
 
 The `skills/code-security-review/` skill implements a mandatory 3-phase code audit process (integrated from `anthropics/claude-code-security-review`):

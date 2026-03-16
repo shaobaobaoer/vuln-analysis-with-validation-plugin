@@ -68,7 +68,32 @@ docker exec -d <container> sh -c '
 
 ---
 
-## Unified Validation Flow (5 Steps)
+## Unified Validation Flow (6 Steps)
+
+### Step 0: Entry Point Verification (MANDATORY)
+
+Before executing any PoC, verify the target entry point actually exists and responds:
+
+**Web App endpoints**:
+```bash
+# Verify the endpoint exists (use the entry_point.path from vulnerabilities.json)
+curl -sf -o /dev/null -w "%{http_code}" http://localhost:<port>/api/exec
+# Accept: 200, 401, 403, 405 (endpoint exists). Reject: 000, 404 (endpoint missing)
+```
+
+**Library API**:
+```bash
+# Verify the library is importable and the function exists
+docker exec <container> python3 -c "import sample_lib; assert hasattr(sample_lib, 'parse')"
+```
+
+**CLI commands**:
+```bash
+# Verify the CLI tool runs and accepts the relevant argument
+docker exec <container> tool --help | grep -q "input"
+```
+
+**If entry point does NOT exist**: Mark the vulnerability as `[FAILED]` with reason `ENTRY_POINT_NOT_FOUND`. Do NOT execute the PoC — it would produce a false result. This typically indicates a false positive from the analysis phase.
 
 ### Step 1: Environment Initialization
 

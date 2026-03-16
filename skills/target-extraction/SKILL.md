@@ -31,6 +31,39 @@ Analyze a GitHub repository and extract target metadata for the vulnerability an
    - Otherwise → `library`
 5. Write `workspace/target.json` with extracted metadata
 
+## Entry Point Discovery (MANDATORY)
+
+After identifying the project type, enumerate all public entry points. These define the **attack surface** — only vulnerabilities reachable from these entry points are valid.
+
+### By Project Type
+
+**Library** (`type: "library"`):
+1. Find the package's public API surface:
+   - Python: Read `__init__.py` exports, public functions/classes (no leading `_`)
+   - JavaScript: Read `package.json` `main`/`exports`, trace exported symbols
+   - Go: Find capitalized (exported) functions/types in package root
+   - Java: Find `public` classes and methods
+2. List all public functions, classes, and methods
+3. Exclude: private/internal functions, test utilities, dev-only helpers
+
+**Web App** (`type: "webapp"`):
+1. Find all HTTP route definitions:
+   - Flask: `@app.route()`, `@blueprint.route()`
+   - Express: `app.get()`, `router.post()`, etc.
+   - Django: `urlpatterns`, `path()`, `re_path()`
+   - FastAPI: `@app.get()`, `@app.post()`, etc.
+   - Spring: `@RequestMapping`, `@GetMapping`, etc.
+2. List each endpoint with method, path, and parameters
+3. Note authentication requirements (public vs. authenticated vs. admin)
+
+**CLI Tool** (`type: "cli"`):
+1. Find the CLI entry point (main function, argument parser):
+   - Python: `argparse`, `click`, `typer`, `fire`
+   - Go: `cobra`, `flag`, `os.Args`
+   - Node: `commander`, `yargs`, `process.argv`
+2. List all commands, subcommands, and arguments that accept user input
+3. Trace which code paths are reachable from each argument
+
 ## Output Schema
 
 ```json
@@ -45,9 +78,28 @@ Analyze a GitHub repository and extract target metadata for the vulnerability an
   "description": "string",
   "tech_stack": ["string"],
   "exposed_ports": [8080],
-  "has_dockerfile": true
+  "has_dockerfile": true,
+  "entry_points": [
+    {
+      "type": "library_api|webapp_endpoint|cli_command",
+      "path": "module.function()|POST /api/exec|tool --input",
+      "access_level": "public|authenticated|admin",
+      "parameters": ["param1", "param2"],
+      "source_file": "app/views.py:42"
+    }
+  ]
 }
 ```
+
+### Entry Point Fields
+
+| Field | Description |
+|-------|-------------|
+| `type` | One of: `library_api`, `webapp_endpoint`, `cli_command` |
+| `path` | How to invoke: function signature, HTTP endpoint, or CLI syntax |
+| `access_level` | `public` (no auth), `authenticated` (requires login), `admin` (requires admin) |
+| `parameters` | User-controllable parameters at this entry point |
+| `source_file` | Source file and line where this entry point is defined |
 
 ## Best Practices
 
@@ -56,3 +108,5 @@ Analyze a GitHub repository and extract target metadata for the vulnerability an
 - Look for `.env.example` files to understand required environment variables
 - Prefer release tags over HEAD for version identification
 - If multiple entry points exist, prioritize the one that starts the main service
+- **Entry points define the attack surface** — be thorough in discovery. Missing an entry point may cause valid vulnerabilities to be excluded
+- For libraries, check `__init__.py` / `index.js` / package root exports to determine public API boundary

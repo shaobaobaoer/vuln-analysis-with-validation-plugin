@@ -102,11 +102,33 @@ Additionally, **file-level rules** apply:
 
 ## File-Level Rules Summary
 
-| File Extension | Rule |
-|---------------|------|
+| File Extension / Path | Rule |
+|----------------------|------|
 | `.md` | **All findings excluded** — "Finding in Markdown documentation file" |
 | NOT `.c`, `.cc`, `.cpp`, `.h` | Memory safety findings excluded |
 | `.html` | SSRF findings excluded |
+| `test_*`, `*_test.*`, `__tests__/`, `tests/`, `spec/` | **All findings excluded** — "Finding in test file (not deployed)" |
+| `examples/`, `example_*`, `demo/`, `benchmark/` | **All findings excluded** — "Finding in example/demo code (not deployed)" |
+
+## Entry Point Context Rules
+
+> These rules apply to the **file path and function context** of findings, not the title/description.
+
+### Private/Internal Code Detection
+
+**Exclusion Reason**: `Finding in private/internal code with no public entry point path`
+
+For **library** projects, auto-flag findings in these locations for reachability review:
+
+| Language | Private Indicator | Action |
+|----------|------------------|--------|
+| Python | Function/method starts with `_` (e.g., `_parse`, `__internal`) | Flag for reachability trace |
+| Python | File in `_internal/`, `_utils/`, `_private/` directory | Flag for reachability trace |
+| Go | Function/type starts with lowercase letter | Flag for reachability trace |
+| Java | `private` or `protected` access modifier | Flag for reachability trace |
+| JavaScript | Not exported from package entry point | Flag for reachability trace |
+
+**Important**: Flagging ≠ auto-excluding. Private code COULD be called by a public function. The AI filtering step (§Entry Point Reachability Filter in `filtering-rules.md`) performs the actual call-path trace to determine if the finding is reachable.
 
 ---
 

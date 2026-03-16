@@ -52,6 +52,10 @@ For each **CONFIRMED** vulnerability, include a **self-contained reproduction bl
 - **Status**: CONFIRMED
 - **Description**: What the vulnerability is
 - **Affected Component**: File path + line number, endpoint, or parameter
+- **Entry Point Type**: `library_api` / `webapp_endpoint` / `cli_command`
+- **Entry Point Path**: The public API call, HTTP endpoint, or CLI command through which this vulnerability is reachable (e.g., `sample_lib.parse()`, `POST /api/exec`, `tool --input`)
+- **Access Level**: public / authenticated / admin
+- **Call Chain**: Trace from public entry point → intermediate functions → vulnerable code (e.g., `POST /api/exec → handle_exec() → eval(user_input)`)
 
 #### Reproduction (per vulnerability)
 

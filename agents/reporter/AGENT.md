@@ -57,6 +57,8 @@ workspace/report/
 - Executive summary accurately reflects the confirmed findings
 - All severity ratings are justified
 - PoC scripts appendix includes execution instructions via `docker exec` (NEVER host-side `python3`)
+- **Every vulnerability clearly states its entry point** (type: `library_api` / `webapp_endpoint` / `cli_command`, path, access level)
+- **Every vulnerability explains the call chain** from the public entry point to the vulnerable code (how an attacker reaches it)
 
 ## Severity Rating Algorithm
 
@@ -120,7 +122,12 @@ Generate `workspace/report/summary.json` conforming to the following schema:
       "type": "rce",
       "severity": "CRITICAL",
       "status": "CONFIRMED",
-      "description": "Remote code execution via eval()"
+      "description": "Remote code execution via eval()",
+      "entry_point": {
+        "type": "webapp_endpoint",
+        "path": "POST /api/exec",
+        "access_level": "public"
+      }
     }
   ]
 }
@@ -184,6 +191,10 @@ until curl -sf http://localhost:<host_port>/ > /dev/null 2>&1; do sleep 2; done
 - **Status**: CONFIRMED
 - **Affected Component**: <file:line or endpoint>
 - **CVE**: <CVE-ID or N/A>
+- **Entry Point Type**: `library_api` / `webapp_endpoint` / `cli_command`
+- **Entry Point Path**: <e.g., `POST /api/exec`, `sample_lib.parse()`, `tool --input`>
+- **Access Level**: public / authenticated / admin
+- **Call Chain**: <route/function → handler → vulnerable_code>
 
 #### Description
 <detailed description of the vulnerability and its impact>

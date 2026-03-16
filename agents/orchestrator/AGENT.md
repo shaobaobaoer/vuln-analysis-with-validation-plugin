@@ -97,9 +97,10 @@ The pipeline ONLY supports these 6 vulnerability types. Any finding outside this
 
 ### Step 4: Vulnerability Analysis (MANDATORY)
 - **Delegate to**: `analyzer` agent
-- Input: `workspace/target.json`, source code
+- Input: `workspace/target.json` (MUST include `entry_points[]`), source code
 - Output: `workspace/vulnerabilities.json`
 - The analyzer MUST only output vulnerabilities with types from the 6 supported types listed above
+- **Every finding MUST include `entry_point` with reachability assessment** — findings with `not_reachable` are excluded
 - **Abort pipeline if this fails**
 
 ### Step 5: PoC Generation
@@ -302,7 +303,7 @@ Agent(agent="analyzer", prompt="Extract target information from the repository a
 
 **Step 4 — Vulnerability Analysis:**
 ```
-Agent(agent="analyzer", prompt="Analyze the source code in workspace/repo/ using the target profile in workspace/target.json. Identify all candidate vulnerabilities. ONLY output vulnerabilities of the 6 supported types: rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection. Map 'path traversal' to 'arbitrary_file_rw', 'code injection'/'template injection' to 'rce'. Exclude types not in this list. Output workspace/vulnerabilities.json.")
+Agent(agent="analyzer", prompt="Analyze the source code in workspace/repo/ using the target profile in workspace/target.json. Identify all candidate vulnerabilities. ONLY output vulnerabilities of the 6 supported types: rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection. Map 'path traversal' to 'arbitrary_file_rw', 'code injection'/'template injection' to 'rce'. Exclude types not in this list. For EACH finding, assess entry point reachability: trace backward from the vulnerable code to a public entry point listed in target.json entry_points[]. EXCLUDE any finding with reachability = 'not_reachable'. Include the entry_point object (type, path, access_level, reachability, call_chain) in each vulnerability. Output workspace/vulnerabilities.json.")
 ```
 
 **Steps 5+7+8 — PoC Generation + Reproduction + Validation + Retry:**
@@ -420,10 +421,10 @@ After each step completes (status set to `completed` by the sub-agent), the orch
 
 | Step | Expected Output | Validation |
 |---|---|---|
-| 1 - Target Extraction | `workspace/target.json` | File exists, valid JSON, contains required keys: `language`, `framework`, `entry_points` |
+| 1 - Target Extraction | `workspace/target.json` | File exists, valid JSON, contains required keys: `language`, `framework`, `entry_points`. **`entry_points` array must be non-empty** — these define the attack surface |
 | 2 - Environment Setup | `workspace/Dockerfile` | File exists; Docker container is running and responsive (health check) |
 | 3 - Docker Readiness Gate | Running container | `docker ps` shows container up; `curl` to main endpoint returns HTTP 200 (or CLI runs); health check passes. If fail → return to Step 2 |
-| 4 - Vulnerability Analysis | `workspace/vulnerabilities.json` | File exists, valid JSON, contains `vulnerabilities` array, each entry has `id`, `type`, `severity`. **Type must be one of the 6 supported types.** Abort if fails |
+| 4 - Vulnerability Analysis | `workspace/vulnerabilities.json` | File exists, valid JSON, contains `vulnerabilities` array, each entry has `id`, `type`, `severity`, `entry_point`. **Type must be one of the 6 supported types.** **Every finding must have `entry_point.reachability` = `reachable` or `conditional`.** Abort if fails |
 | 5 - PoC Generation | `workspace/poc_manifest.json` | File exists, valid JSON, at least one PoC entry referencing an existing script file |
 | 6 - Environment Init | Monitoring infrastructure | TCP listeners active, trigger binary deployed, inotifywait running (as applicable) |
 | 7 - Reproduction | `workspace/results.json` | File exists, valid JSON, each entry has `vuln_id`, `status`, and `validation_result` |
@@ -456,6 +457,9 @@ jq -e '.language and .framework and .entry_points' workspace/target.json > /dev/
 
 # Check vulnerability types are valid
 jq -e '.vulnerabilities | all(.type; . == "rce" or . == "ssrf" or . == "insecure_deserialization" or . == "arbitrary_file_rw" or . == "dos" or . == "command_injection")' workspace/vulnerabilities.json > /dev/null 2>&1
+
+# Check entry point reachability exists and is valid
+jq -e '.vulnerabilities | all(.entry_point.reachability; . == "reachable" or . == "conditional")' workspace/vulnerabilities.json > /dev/null 2>&1
 ```
 
 **IMPORTANT**: NEVER run `python3` directly on the host. Use `jq` for JSON validation on the host side. If you need Python-based validation, run it via `docker exec`.

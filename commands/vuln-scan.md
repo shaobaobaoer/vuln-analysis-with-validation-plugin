@@ -27,10 +27,10 @@ Run the complete vulnerability analysis pipeline against a GitHub repository.
 
 Execute all steps sequentially using the orchestrator agent:
 
-1. **Target Extraction** (mandatory) → Clone repo, analyze project → `workspace/target.json`
+1. **Target Extraction** (mandatory) → Clone repo, analyze project, **enumerate all public entry points** → `workspace/target.json` (must include `entry_points[]`)
 2. **Environment Setup** (mandatory) → Generate Dockerfile, build container, verify health
 3. **Docker Readiness Gate** (mandatory) → Verify the target app runs correctly inside Docker (HTTP 200 / CLI works)
-4. **Vulnerability Analysis** (mandatory) → Search CVEs + static analysis → `workspace/vulnerabilities.json`
+4. **Vulnerability Analysis** (mandatory) → Search CVEs + static analysis + **entry point reachability assessment** → `workspace/vulnerabilities.json` (only reachable/conditional findings)
 5. **PoC Generation** → Write exploit scripts targeting Docker container → `workspace/poc_scripts/`
 6. **Environment Init** → Deploy trigger binary, start TCP listeners, set up file monitors (see `templates/validation_framework.md`)
 7. **Reproduction + Validation** → Execute PoCs → legitimacy check (anti-cheat) → type-specific validation → `workspace/results.json`

@@ -38,6 +38,47 @@ Automatically exclude findings matching these patterns:
 
 ---
 
+## Entry Point Reachability Filter (MANDATORY)
+
+Before confidence scoring, assess whether each finding is **reachable** from a public entry point. This is the most critical quality filter — a vulnerability that cannot be reached by an attacker is not a real vulnerability.
+
+### Reachability Rules
+
+1. **Library projects**: The vulnerable code must be callable through the library's public API. If the vulnerability is in a private function (`_func` in Python, unexported in Go, non-`public` in Java) that is never called from any public API path, **EXCLUDE** it.
+2. **Web applications**: The vulnerable code must be reachable from an HTTP endpoint. If the vulnerable function is an internal helper that no route handler calls, **EXCLUDE** it.
+3. **CLI tools**: The vulnerable code must be reachable from CLI argument parsing. If the code is only used in tests or internal utilities, **EXCLUDE** it.
+4. **Test-only code**: Vulnerabilities in test files, test fixtures, example scripts, or benchmark code are **EXCLUDED** regardless of type.
+5. **Dead code**: Functions with no caller (not referenced anywhere and not part of the public API) are **EXCLUDED**.
+
+### Reachability Confidence Adjustment
+
+| Reachability | Adjustment | Rationale |
+|-------------|------------|-----------|
+| Clearly reachable from public entry point | **+2 confidence** | Attacker can definitely trigger this |
+| Reachability ambiguous | **no adjustment** | Needs further investigation |
+| Private/internal code with unclear call path | **-3 confidence** | Likely not exploitable |
+| Test/example/dead code | **auto-exclude** | Never deployed to production |
+
+### Entry Point Tracing
+
+For each finding, trace backward from the vulnerable code:
+
+```
+REACHABLE example:
+  eval(user_input) at views.py:42
+    ↑ called by handler_func() at views.py:30
+      ↑ registered as route: @app.route("/api/exec")
+        = REACHABLE via POST /api/exec → KEEP
+
+NOT REACHABLE example:
+  eval(data) at _internal/parser.py:15
+    ↑ called by _parse_unsafe() at _internal/parser.py:10
+      ↑ NOT called from any public API function
+        = NOT REACHABLE → EXCLUDE
+```
+
+---
+
 ## Precedents
 
 Specific guidance for common security patterns:

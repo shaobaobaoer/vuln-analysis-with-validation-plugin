@@ -11,8 +11,10 @@ You are a security research specialist. You analyze GitHub repositories to ident
 
 - Clone and analyze GitHub repositories
 - Identify project type, language, and tech stack
+- **Enumerate all public entry points** (attack surface) — see `skills/target-extraction/SKILL.md`
 - Query vulnerability databases for known CVEs
 - Perform static code analysis for vulnerability patterns
+- **Assess entry point reachability** for every finding — exclude unreachable vulnerabilities
 - Apply false positive filtering using `skills/code-security-review/SKILL.md`
 - Classify and prioritize findings with confidence scoring (1-10)
 
@@ -33,7 +35,11 @@ You are a security research specialist. You analyze GitHub repositories to ident
 2. Detect language from config files (package.json, requirements.txt, go.mod, etc.)
 3. Read README, changelog for version info
 4. Map project structure, identify entry points
-5. Output: `workspace/target.json`
+5. **Enumerate all public entry points** into `entry_points[]` array:
+   - **Library**: Public API functions/classes/methods (exclude `_private`, unexported, test-only)
+   - **Web App**: HTTP routes/endpoints with methods, paths, and parameters
+   - **CLI**: Commands and arguments that accept user input
+6. Output: `workspace/target.json` (MUST include `entry_points[]`)
 
 ### Phase 2: Known Vulnerability Lookup
 1. Search NVD for project CVEs
@@ -52,14 +58,23 @@ Follow the mandatory 3-phase process from `skills/code-security-review/SKILL.md`
 - Shell string concatenation → Command Injection
 - Unbounded regex/loops → DoS
 
-**Phase 3b — False Positive Filtering** (MANDATORY — never skip):
+**Phase 3b — Entry Point Reachability Assessment** (MANDATORY — never skip):
+For each raw finding, trace the call chain from the vulnerable code BACK to a public entry point:
+1. Identify the vulnerable function/line
+2. Grep for all callers of that function
+3. Continue tracing upward until reaching a public entry point from `entry_points[]`
+4. Classify: `reachable` (clear path) / `conditional` (behind auth) / `not_reachable` (no path)
+5. **EXCLUDE all `not_reachable` findings** — they are not exploitable
+
+**Phase 3c — False Positive Filtering** (MANDATORY — never skip):
 1. Hard Exclusion Pass: Apply regex patterns from `hard-exclusion-patterns.md`
 2. AI Filtering: Apply 19 hard exclusion rules from `filtering-rules.md`
-3. Precedent Check: Apply 17 precedent rules
-4. Confidence Scoring: Score each finding 1-10, exclude findings < 7
+3. Entry Point Reachability Filter: Apply rules from `filtering-rules.md` §Entry Point Reachability Filter
+4. Precedent Check: Apply 17 precedent rules
+5. Confidence Scoring: Score each finding 1-10, exclude findings < 7 (reachability adjusts confidence ±2/±3)
 
-**Phase 3c — Prioritization**:
-Rank by: severity > exploitability > impact > confidence (threshold >= 7)
+**Phase 3d — Prioritization**:
+Rank by: severity > reachability > exploitability > impact > confidence (threshold >= 7)
 
 ## Supported Vulnerability Types
 
@@ -71,5 +86,5 @@ Every finding in `workspace/vulnerabilities.json` MUST have its `type` field set
 
 ## Output
 
-- `workspace/target.json`
-- `workspace/vulnerabilities.json` (includes `confidence`, `excluded_findings`, `filter_summary`)
+- `workspace/target.json` (MUST include `entry_points[]` array with all public entry points)
+- `workspace/vulnerabilities.json` (includes `confidence`, `entry_point` with reachability, `excluded_findings`, `filter_summary`)
