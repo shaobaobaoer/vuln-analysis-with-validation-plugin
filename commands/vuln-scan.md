@@ -32,9 +32,9 @@ Execute all steps sequentially using the orchestrator agent:
 3. **Docker Readiness Gate** (mandatory) → Verify the target app runs correctly inside Docker (HTTP 200 / CLI works)
 4. **Vulnerability Analysis** (mandatory) → Search CVEs + static analysis → `workspace/vulnerabilities.json`
 5. **PoC Generation** → Write exploit scripts targeting Docker container → `workspace/poc_scripts/`
-6. **Reproduction** → Execute PoCs against Docker container (NEVER on host)
-7. **Retry Loop** → Auto-fix failures, max 5 retries per vuln
-8. **Validation** → Run type-specific validators from `skills/validate-*/SKILL.md`
+6. **Environment Init** → Deploy trigger binary, start TCP listeners, set up file monitors (see `templates/validation_framework.md`)
+7. **Reproduction + Validation** → Execute PoCs → legitimacy check (anti-cheat) → type-specific validation → `workspace/results.json`
+8. **Retry Loop** → Auto-fix failures, re-initialize monitors, max 5 retries per vuln
 9. **Report** → Generate `workspace/report/REPORT.md` + `summary.json`
 
 **Abort conditions**: Steps 1-4 failing = pipeline abort. No fallback, no skip.

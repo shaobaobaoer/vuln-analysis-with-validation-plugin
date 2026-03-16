@@ -60,15 +60,19 @@ You are a security pipeline orchestrator. You coordinate the end-to-end vulnerab
 - Output: `workspace/poc_scripts/`, `workspace/poc_manifest.json`
 - **Constraint**: All generated PoC scripts must target `http://localhost:<docker_port>` only
 
-### Step 5-6: Reproduction + Retry Loop (Docker-only)
+### Step 5: Environment Initialization
+- Set up validation infrastructure before PoC execution (see `templates/validation_framework.md`)
+- Deploy trigger binary (`trigger.linux` → `/tmp/invoke`), start TCP listeners (ports 59875/59876), set up file monitors (`inotifywait`)
+- Only set up infrastructure relevant to the vulnerability types being tested
+
+### Step 5-7: Reproduction + Validation + Retry Loop (Docker-only)
 - Delegate to the `exploiter` agent
 - **Pre-check**: Re-verify Docker container is running before executing any PoC
-- Max 5 retries per vulnerability
+- Execute PoCs → legitimacy check (anti-cheat) → type-specific validation
+- Three possible outcomes per vulnerability: `[SUCCESS]`, `[FAILED]`, `[INVALID]`
+- Max 5 retries per vulnerability (re-initialize monitors each retry)
 - All execution happens against the Docker container — NEVER on the host
 - Output: `workspace/results.json`
-
-### Step 7: Validation
-- Run type-specific validators for final confirmation
 
 ### Step 8: Report
 - Delegate to the `reporter` agent
@@ -224,9 +228,8 @@ The orchestrator never performs specialized work directly. It delegates each ste
 | 2.5 - Docker Readiness Gate | `orchestrator` (self) | Running container | Gate pass/fail | Verify container is up, app responds, health check passes. **MANDATORY** |
 | 3 - Vulnerability Analysis | `analyzer` | Source code + `workspace/target.json` | `workspace/vulnerabilities.json` | Static analysis to identify candidate vulnerabilities. **MANDATORY** |
 | 4 - PoC Generation | `exploiter` | `workspace/vulnerabilities.json` | `workspace/poc_scripts/` + `workspace/poc_manifest.json` | Generate PoC scripts targeting Docker container ONLY |
-| 5 - Reproduction | `exploiter` | `workspace/poc_manifest.json` + container | `workspace/results.json` | Execute PoC scripts against Docker container (NEVER on host) |
-| 6 - Retry Loop | `exploiter` | Failed entries from `workspace/results.json` | Updated `workspace/results.json` | Re-attempt failed PoCs with adjustments, up to 5 retries per vuln |
-| 7 - Validation | `exploiter` | `workspace/results.json` | Updated `workspace/results.json` | Run type-specific validators (e.g., RCE command output check, SQLi data exfil check) |
+| 5 - Env Init | `orchestrator` (self) | Container + `trigger.linux` | Monitoring infrastructure deployed | Deploy trigger binary, start TCP listeners, set up inotifywait |
+| 5-7 - Reproduction + Validation + Retry | `exploiter` | `workspace/poc_manifest.json` + container | `workspace/results.json` | Execute PoCs → legitimacy check → type-specific validation → retry loop (max 5) |
 | 8 - Report | `reporter` | All `workspace/` artifacts | `workspace/report/REPORT.md` + `workspace/report/summary.json` | Compile findings into a structured report with evidence |
 
 ### Delegation Protocol
@@ -255,9 +258,9 @@ Agent(agent="analyzer", prompt="Extract target information from the repository a
 Agent(agent="analyzer", prompt="Analyze the source code in workspace/repo/ using the target profile in workspace/target.json. Identify all candidate vulnerabilities. Output workspace/vulnerabilities.json with an array of objects, each containing: id, type, severity, location, description, and suggested_exploit_approach.")
 ```
 
-**Steps 4-6 — PoC + Reproduction + Retry:**
+**Steps 4-7 — PoC + Env Init + Reproduction + Validation + Retry:**
 ```
-Agent(agent="exploiter", prompt="Generate PoC scripts for each vulnerability in workspace/vulnerabilities.json. Place scripts in workspace/poc_scripts/. Execute each PoC in the running container. Record results in workspace/results.json. For any failed PoC, retry up to 5 times with adjustments (2 min max per attempt). Each result entry must have: vuln_id, status (confirmed/failed/error), evidence, and attempts.")
+Agent(agent="exploiter", prompt="Generate PoC scripts for each vulnerability in workspace/vulnerabilities.json. Place scripts in workspace/poc_scripts/. Set up validation infrastructure per templates/validation_framework.md (deploy trigger binary, start TCP listeners, set up inotifywait). Execute each PoC in the running container. Run legitimacy check (anti-cheat) on each PoC source. Run type-specific validation. For any [FAILED] result, retry up to 5 times with adjustments (re-initialize monitors each retry, 2 min max per attempt). Record results in workspace/results.json with outcomes: [SUCCESS], [FAILED], or [INVALID].")
 ```
 
 **Step 8 — Report:**

@@ -26,14 +26,17 @@ Execute PoC scripts against the Docker-containerized target and verify reproduct
    - Verify the target app responds correctly inside Docker (HTTP 200 or CLI executes)
    - If container is down, start it: `docker-compose up -d`
    - If app doesn't respond after container start, **abort** — do NOT proceed with broken environment
-2. Delegate to the `exploiter` agent (`agents/exploiter/AGENT.md`)
-3. Execute each PoC from `workspace/poc_manifest.json` against `http://localhost:<docker_port>`
-4. For failures, enter retry loop (max 5 per vuln):
+2. **Initialize monitoring** — Deploy trigger binary, start TCP listeners, set up file monitors per `templates/validation_framework.md`
+3. Delegate to the `exploiter` agent (`agents/exploiter/AGENT.md`)
+4. Execute each PoC from `workspace/poc_manifest.json` against `http://localhost:<docker_port>`
+5. **Legitimacy check** — Scan PoC source for forbidden direct-call patterns (anti-cheat)
+6. **Type-specific validation** — Check success condition per vulnerability type
+7. For failures, enter retry loop (max 5 per vuln):
+   - Re-initialize monitoring (restart listeners, clean markers)
    - Diagnose: ENV_ISSUE / POC_BUG / PARAM_MISMATCH / TIMING / NOT_VULNERABLE
    - Apply fix and re-execute
-5. Run type-specific validators from `skills/validate-*/SKILL.md`
-6. Save results to `workspace/results.json`
-7. Cleanup containers after completion
+8. Save results to `workspace/results.json` (outcomes: `[SUCCESS]`, `[FAILED]`, `[INVALID]`)
+9. Cleanup containers after completion
 
 ## Output
 
