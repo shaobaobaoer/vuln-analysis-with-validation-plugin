@@ -82,14 +82,70 @@ This is a Claude plugin for automated security vulnerability verification of ope
 - All Dockerfiles for Python projects must install `uv` and use it for dependency management
 - Use `setup_` prefix for auto-created environments; never delete user environments
 - Mandatory: write `ENVIRONMENT_SETUP.md` after every environment build
-- Cleanup containers after testing
 
-### 5. Report Format
+### 5. Docker Resource Labeling & Cleanup
+
+All Docker resources (containers, images, networks, volumes) created by the pipeline MUST be labeled with the pipeline ID for safe, targeted cleanup.
+
+**Label convention**:
+- Label key: `vuln-analysis.pipeline-id`
+- Label value: the pipeline's `pipeline_id` (e.g., `vuln-a1b2c3d4`)
+
+**Applying labels**:
+```dockerfile
+# In Dockerfile
+LABEL vuln-analysis.pipeline-id="vuln-a1b2c3d4"
+```
+```bash
+# In docker run
+docker run --label "vuln-analysis.pipeline-id=vuln-a1b2c3d4" ...
+```
+```yaml
+# In docker-compose.yml
+services:
+  app:
+    labels:
+      vuln-analysis.pipeline-id: "vuln-a1b2c3d4"
+```
+
+**Safe cleanup** (only removes resources belonging to THIS pipeline run):
+```bash
+PIPELINE_ID="vuln-a1b2c3d4"
+
+# 1. Stop and remove containers
+docker ps -aq --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker rm -f
+
+# 2. Remove images
+docker images -q --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker rmi -f
+
+# 3. Remove networks
+docker network ls -q --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker network rm
+
+# 4. Remove volumes
+docker volume ls -q --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker volume rm
+```
+
+**FORBIDDEN cleanup commands** (too aggressive, will destroy other running containers):
+```bash
+docker system prune              # Kills ALL unused resources across the system
+docker container prune           # Kills ALL stopped containers, not just ours
+docker image prune -a            # Kills ALL unused images
+docker rm -f $(docker ps -aq)    # Kills ALL containers
+docker-compose down -v --rmi all # Removes images that may be shared
+```
+
+**When to clean up**:
+- After Step 9 (report) completes successfully
+- On pipeline abort (Steps 1-4 failure)
+- On `--restart` before beginning a new run
+- NEVER during active PoC execution (Steps 7-8)
+
+### 6. Report Format
 - Markdown for human-readable reports
 - JSON for machine-readable summaries
 - Include: executive summary, per-vuln details, reproduction steps, remediation
 
-### 6. Validation Framework
+### 7. Validation Framework
 - All PoC validation uses the unified framework in `templates/validation_framework.md`
 - Three outcomes: `[SUCCESS]`, `[FAILED]`, `[INVALID]`
 - Anti-cheat legitimacy check: PoC must exploit through the target app, not call system APIs directly

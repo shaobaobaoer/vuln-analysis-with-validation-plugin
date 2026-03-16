@@ -83,6 +83,7 @@ The pipeline ONLY supports these 6 vulnerability types. Any finding outside this
 - Input: `workspace/target.json`
 - Output: `workspace/Dockerfile`, `workspace/docker-compose.yml`, running container
 - The builder MUST use `uv` for all Python dependency management in generated Dockerfiles
+- **All Docker resources MUST be labeled** with `vuln-analysis.pipeline-id=<pipeline_id>` for safe cleanup (see §Docker Resource Cleanup)
 - Retry 3x on failure, then **abort pipeline**
 
 ### Step 3: Docker Readiness Gate (MANDATORY)
@@ -136,6 +137,11 @@ The pipeline ONLY supports these 6 vulnerability types. Any finding outside this
 ### Step 9: Report
 - **Delegate to**: `reporter` agent
 - Output: `workspace/report/REPORT.md`, `workspace/report/summary.json`
+
+### Post-Pipeline: Docker Resource Cleanup
+- **Performed by**: orchestrator (self)
+- Run **after** Step 9 completes, or on pipeline abort (Steps 1-4 failure)
+- See §Docker Resource Cleanup below for details
 
 ## State Management
 
@@ -377,15 +383,16 @@ When the orchestrator is invoked and `workspace/pipeline_state.json` already exi
 
 When the user provides the `--restart` flag:
 
-1. Reset all step statuses to `pending`
-2. Clear all `started_at`, `completed_at`, `error` fields
-3. Reset all `retries` to 0
-4. Set `current_step` to 1
-5. Set `overall_status` to `running`
-6. Generate a new `pipeline_id`
-7. Update `started_at` at the pipeline level to the current timestamp
-8. Set `completed_at` to null
-9. Begin execution from Step 1
+1. **Clean up old pipeline resources** — run the safe cleanup procedure (§Docker Resource Cleanup) using the old `pipeline_id` from the existing state file
+2. Reset all step statuses to `pending`
+3. Clear all `started_at`, `completed_at`, `error` fields
+4. Reset all `retries` to 0
+5. Set `current_step` to 1
+6. Set `overall_status` to `running`
+7. Generate a new `pipeline_id`
+8. Update `started_at` at the pipeline level to the current timestamp
+9. Set `completed_at` to null
+10. Begin execution from Step 1
 
 ### Start-Step Override (`--start-step N`)
 
@@ -452,3 +459,81 @@ jq -e '.vulnerabilities | all(.type; . == "rce" or . == "ssrf" or . == "insecure
 ```
 
 **IMPORTANT**: NEVER run `python3` directly on the host. Use `jq` for JSON validation on the host side. If you need Python-based validation, run it via `docker exec`.
+
+## Docker Resource Cleanup
+
+All Docker resources created by the pipeline are labeled with `vuln-analysis.pipeline-id=<pipeline_id>` so they can be safely cleaned up without affecting other running containers.
+
+### Label Convention
+
+The `pipeline_id` from `pipeline_state.json` (e.g., `vuln-a1b2c3d4`) is used as the label value. The builder agent MUST apply this label to all resources it creates.
+
+**How labels are applied**:
+```dockerfile
+# Dockerfile — build-time label (injected via --build-arg or --label)
+LABEL vuln-analysis.pipeline-id="vuln-a1b2c3d4"
+```
+```bash
+# docker build — pass label at build time
+docker build --label "vuln-analysis.pipeline-id=${PIPELINE_ID}" -t "vuln-${PIPELINE_ID}-target" .
+
+# docker run — pass label at run time
+docker run --label "vuln-analysis.pipeline-id=${PIPELINE_ID}" --name "vuln-${PIPELINE_ID}-app" ...
+```
+```yaml
+# docker-compose.yml — label in service definition
+services:
+  app:
+    labels:
+      vuln-analysis.pipeline-id: "${PIPELINE_ID}"
+    networks:
+      - vuln-net
+networks:
+  vuln-net:
+    labels:
+      vuln-analysis.pipeline-id: "${PIPELINE_ID}"
+```
+
+### Safe Cleanup Procedure
+
+Run after Step 9 completes or on pipeline abort:
+
+```bash
+PIPELINE_ID="<pipeline_id from pipeline_state.json>"
+
+# 1. Stop and remove containers (only this pipeline's)
+docker ps -aq --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker rm -f
+
+# 2. Remove images (only this pipeline's)
+docker images -q --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker rmi -f
+
+# 3. Remove networks (only this pipeline's)
+docker network ls -q --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker network rm
+
+# 4. Remove volumes (only this pipeline's)
+docker volume ls -q --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker volume rm
+
+echo "Cleanup complete for pipeline ${PIPELINE_ID}"
+```
+
+### FORBIDDEN Cleanup Commands
+
+These commands are **too aggressive** — they destroy resources belonging to other pipelines or other users:
+
+```bash
+docker system prune              # Kills ALL unused resources system-wide
+docker container prune           # Kills ALL stopped containers
+docker image prune -a            # Kills ALL unused images
+docker rm -f $(docker ps -aq)    # Kills ALL containers indiscriminately
+docker-compose down --rmi all    # Removes images that may be shared by other runs
+```
+
+### When to Clean Up
+
+| Trigger | Action |
+|---------|--------|
+| Step 9 completes successfully | Run full cleanup |
+| Pipeline abort (Steps 1-4 failure) | Run full cleanup |
+| `--restart` flag | Clean up old pipeline resources before starting new run |
+| During Steps 7-8 (active PoC execution) | **NEVER clean up** — containers are in use |
+| Manual user request | Run cleanup for specified `pipeline_id` |

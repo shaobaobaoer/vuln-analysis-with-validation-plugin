@@ -264,6 +264,10 @@ When no Docker/compose exists and manual setup is not possible, generate a Docke
 FROM python:3.12-slim
 WORKDIR /app
 
+# Pipeline label for safe cleanup (value injected via --build-arg or --label at build time)
+ARG PIPELINE_ID="unknown"
+LABEL vuln-analysis.pipeline-id="${PIPELINE_ID}"
+
 # Install system deps + uv
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl gcc && rm -rf /var/lib/apt/lists/* \
@@ -281,6 +285,8 @@ HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
 CMD ["python", "app.py"]
 ```
 
+Build with: `docker build --build-arg PIPELINE_ID="${PIPELINE_ID}" --label "vuln-analysis.pipeline-id=${PIPELINE_ID}" -t "vuln-${PIPELINE_ID}-target" .`
+
 **IMPORTANT**: Always use `uv pip install` instead of `pip install`. If the project has `pyproject.toml`, prefer `uv sync`.
 
 ### Dockerfile Best Practices
@@ -289,6 +295,7 @@ CMD ["python", "app.py"]
 - Use `--no-install-recommends` to keep images small
 - Pin dependency versions where possible
 - For multi-service projects (app + DB), always use docker-compose
+- **Always label** all resources with `vuln-analysis.pipeline-id=${PIPELINE_ID}` — apply via `docker build --label` and `docker run --label` (the orchestrator provides `PIPELINE_ID`)
 
 ---
 

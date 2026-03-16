@@ -50,10 +50,13 @@ workspace/report/
 
 ## Report Quality Checklist
 
-- Every CONFIRMED vulnerability has reproduction steps
+- Every CONFIRMED vulnerability has the **full 5-part Reproduction block**: pre-conditions, PoC execution command, expected output, verification command, payload
+- All reproduction commands are **copy-paste-ready** (absolute paths, correct container names, correct ports)
+- The "Reproduction Environment" section contains the exact Dockerfile and docker build/run commands
 - Every vulnerability has a remediation recommendation
 - Executive summary accurately reflects the confirmed findings
 - All severity ratings are justified
+- PoC scripts appendix includes execution instructions via `docker exec` (NEVER host-side `python3`)
 
 ## Severity Rating Algorithm
 
@@ -151,6 +154,29 @@ Generate `workspace/report/REPORT.md` following this template:
 - Risk Score: <score>
 - Total Findings: <N> identified, <M> confirmed
 
+## Reproduction Environment
+
+### Prerequisites
+- Docker 20.10+
+- Source code: `git clone <repo_url> && cd <repo_name>`
+
+### Build & Start
+```bash
+# Build image
+docker build -t <image_name> -f Dockerfile .
+
+# Start container
+docker run -d --name <container_name> -p <host_port>:<container_port> <image_name>
+
+# Wait for healthy
+until curl -sf http://localhost:<host_port>/ > /dev/null 2>&1; do sleep 2; done
+```
+
+### Dockerfile
+```dockerfile
+<full Dockerfile contents>
+```
+
 ## Confirmed Vulnerabilities
 
 ### VULN-001: <type> — <short_title>
@@ -160,35 +186,75 @@ Generate `workspace/report/REPORT.md` following this template:
 - **CVE**: <CVE-ID or N/A>
 
 #### Description
-<detailed description>
+<detailed description of the vulnerability and its impact>
 
-#### Reproduction Steps
-1. Start the environment: `docker-compose up -d`
-2. Execute: `python3 poc_scripts/poc_<type>_<id>.py --target http://localhost:8080`
-3. Observe: <what happens>
+#### Reproduction
+
+**1. Pre-conditions:**
+```bash
+<monitoring setup commands — e.g., start TCP listener, deploy trigger binary, create flag file>
+```
+
+**2. Execute PoC:**
+```bash
+docker cp poc_scripts/poc_<type>_<NNN>.py <container>:/app/
+docker exec <container> python3 /app/poc_<type>_<NNN>.py --target http://localhost:<internal_port> --timeout 30
+```
+
+**3. Expected output:**
+```
+[CONFIRMED] VULN-001: <description> — marker VULN_CONFIRMED_<type>_<NNN> found
+Exit code: 0
+```
+
+**4. Verification:**
+```bash
+<verification command — e.g., docker exec <container> cat /tmp/poc_result.txt | grep "test_message">
+```
+
+**5. Payload used:**
+```
+<the actual exploit payload>
+```
 
 #### Evidence
-<request/response snippets, screenshots>
+<request/response snippets, validation output>
 
 #### Remediation
 <specific fix recommendation with code example>
 
 ## Not Reproduced Findings
-<list with explanation of why reproduction failed>
 
-## Environment Setup
-<how to recreate the testing environment>
+### VULN-XXX: <type> — <short_title>
+- **Status**: NOT_REPRODUCED / PARTIAL / MAX_RETRIES
+- **Reason**: <why reproduction failed>
+- **Retry History**:
+  | Attempt | Diagnosis | Fix Applied | Result |
+  |---------|-----------|-------------|--------|
+  | 1 | POC_BUG | Fixed payload encoding | FAILED |
+  | 2 | PARAM_MISMATCH | Changed endpoint | FAILED |
 
 ## Appendix: PoC Scripts
-<table of all scripts with descriptions>
+
+| Script | Vuln ID | Type | Description | Target |
+|--------|---------|------|-------------|--------|
+| poc_rce_001.py | VULN-001 | rce | RCE via eval() | http://localhost:8080 |
+
+**General execution:**
+```bash
+docker cp poc_scripts/<script> <container>:/app/
+docker exec <container> python3 /app/<script> --target http://localhost:<port> --timeout 30
+```
 ```
 
 ### Template Usage Rules
 
 - Repeat the `### VULN-XXX` block for each confirmed vulnerability, ordered by severity (CRITICAL first)
-- The "Not Reproduced Findings" section must explain **why** each finding could not be reproduced
-- The "Environment Setup" section should reference the Dockerfile and docker-compose.yml
-- The "Appendix: PoC Scripts" section should include a table with columns: Script Name, Vulnerability ID, Type, Description
+- **Every CONFIRMED vulnerability MUST include the full 5-part Reproduction block** (pre-conditions, execute, expected output, verification, payload)
+- The "Reproduction Environment" section MUST contain the exact Dockerfile and build/run commands used during the scan
+- The "Not Reproduced Findings" section must explain **why** each finding could not be reproduced, with retry history
+- The "Appendix: PoC Scripts" section should include a table with columns: Script, Vuln ID, Type, Description, Target
+- All commands in the report MUST be copy-paste-ready — a reader should be able to reproduce every finding by following the report alone
 
 ## Error Handling for Missing Inputs
 

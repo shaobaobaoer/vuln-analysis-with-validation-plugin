@@ -186,6 +186,10 @@ When no Docker/compose exists and manual setup is not possible, generate a Docke
 FROM python:3.12-slim
 WORKDIR /app
 
+# Pipeline label for safe cleanup (value injected via --build-arg or --label at build time)
+ARG PIPELINE_ID="unknown"
+LABEL vuln-analysis.pipeline-id="${PIPELINE_ID}"
+
 # Install system deps + uv
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl gcc && rm -rf /var/lib/apt/lists/* \
@@ -202,6 +206,8 @@ HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
     CMD curl -f http://localhost:<port>/health || exit 1
 CMD ["python", "app.py"]
 ```
+
+Build with: `docker build --build-arg PIPELINE_ID="${PIPELINE_ID}" --label "vuln-analysis.pipeline-id=${PIPELINE_ID}" -t "vuln-${PIPELINE_ID}-target" .`
 
 **IMPORTANT**: NEVER use `pip install` directly. Always use `uv pip install`. If the project has `pyproject.toml`, prefer `uv sync` instead.
 
