@@ -49,7 +49,7 @@ class BaseValidator(ABC):
     """Abstract base class for vulnerability validators.
 
     Each concrete validator implements confirmation logic for a specific
-    vulnerability type (e.g. RCE, path traversal, XSS).
+    vulnerability type (e.g. RCE, SSRF, command injection).
     """
 
     @property

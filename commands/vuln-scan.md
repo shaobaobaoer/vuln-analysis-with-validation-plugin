@@ -1,5 +1,5 @@
 ---
-description: Run the full 8-step vulnerability analysis pipeline against a GitHub repository. Extracts target, builds Docker env, scans for vulns, generates PoCs, reproduces, and delivers report.
+description: Run the full 9-step vulnerability analysis pipeline against a GitHub repository. Extracts target, builds Docker env, scans for vulns, generates PoCs, reproduces with anti-cheat validation, and delivers report.
 ---
 
 # /vuln-scan — Full Vulnerability Scan Pipeline

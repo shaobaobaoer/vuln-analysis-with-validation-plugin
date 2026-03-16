@@ -6,7 +6,7 @@
     "name": "jiunie"
   },
   "metadata": {
-    "description": "A Claude plugin that automates the full vulnerability analysis lifecycle: target extraction, environment setup (Docker/conda/venv), vulnerability scanning with 3-phase false positive filtering, PoC script generation, containerized reproduction with retry loops, type-specific validation, and comprehensive Markdown/JSON report delivery. Supports 10 vulnerability types including RCE, SSRF, path traversal, XSS, command injection, and more."
+    "description": "A Claude plugin that automates the full vulnerability analysis lifecycle: target extraction, Docker environment setup, vulnerability scanning with 3-phase false positive filtering, PoC script generation, containerized reproduction with anti-cheat validation, retry loops, and comprehensive Markdown/JSON report delivery. Supports 6 vulnerability types: RCE, SSRF, insecure deserialization, arbitrary file R/W, DoS, and command injection."
   },
   "plugins": [
     {

@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Pipeline coordinator that sequences all 8 vulnerability analysis steps, manages state between steps, handles errors with retry logic, and produces final deliverables. Use when running the full /vuln-scan pipeline.
+description: Pipeline coordinator that sequences all 9 vulnerability analysis steps, manages state between steps, handles errors with retry logic, and produces final deliverables. Use when running the full /vuln-scan pipeline.
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent", "WebSearch"]
 model: opus
 ---

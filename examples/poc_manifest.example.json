@@ -4,14 +4,6 @@
   "scripts": [
     {
       "vuln_id": "VULN-001",
-      "type": "path_traversal",
-      "filename": "poc_path_traversal_001.py",
-      "description": "Path traversal via file download endpoint",
-      "severity": "HIGH",
-      "cve": null
-    },
-    {
-      "vuln_id": "VULN-002",
       "type": "rce",
       "filename": "poc_rce_001.py",
       "description": "Remote code execution via template injection",
@@ -19,15 +11,7 @@
       "cve": "CVE-2024-12345"
     },
     {
-      "vuln_id": "VULN-003",
-      "type": "lfi",
-      "filename": "poc_lfi_001.py",
-      "description": "Local file inclusion via page parameter",
-      "severity": "MEDIUM",
-      "cve": null
-    },
-    {
-      "vuln_id": "VULN-004",
+      "vuln_id": "VULN-002",
       "type": "ssrf",
       "filename": "poc_ssrf_001.py",
       "description": "SSRF via URL fetch functionality",
@@ -35,7 +19,7 @@
       "cve": null
     },
     {
-      "vuln_id": "VULN-005",
+      "vuln_id": "VULN-003",
       "type": "insecure_deserialization",
       "filename": "poc_insecure_deser_001.py",
       "description": "Insecure pickle deserialization in API endpoint",
@@ -43,15 +27,7 @@
       "cve": null
     },
     {
-      "vuln_id": "VULN-006",
-      "type": "idor",
-      "filename": "poc_idor_001.py",
-      "description": "IDOR on user profile endpoint",
-      "severity": "MEDIUM",
-      "cve": null
-    },
-    {
-      "vuln_id": "VULN-007",
+      "vuln_id": "VULN-004",
       "type": "arbitrary_file_rw",
       "filename": "poc_arbitrary_file_rw_001.py",
       "description": "Arbitrary file write via upload endpoint",
@@ -59,7 +35,7 @@
       "cve": null
     },
     {
-      "vuln_id": "VULN-008",
+      "vuln_id": "VULN-005",
       "type": "dos",
       "filename": "poc_dos_001.py",
       "description": "ReDoS via search parameter",
@@ -67,15 +43,7 @@
       "cve": null
     },
     {
-      "vuln_id": "VULN-009",
-      "type": "xss",
-      "filename": "poc_xss_001.py",
-      "description": "Reflected XSS in search results",
-      "severity": "MEDIUM",
-      "cve": null
-    },
-    {
-      "vuln_id": "VULN-010",
+      "vuln_id": "VULN-006",
       "type": "command_injection",
       "filename": "poc_command_injection_001.py",
       "description": "Command injection via ping functionality",

@@ -35,53 +35,7 @@ def get_registry() -> ValidatorRegistry:
 
 
 # ---------------------------------------------------------------------------
-# 1. Path Traversal
-# ---------------------------------------------------------------------------
-class PathTraversalValidator(BaseValidator):
-    """Confirms path traversal by looking for root-level file content.
-
-    Typical evidence: ``root:x:0:0:`` from /etc/passwd or similar
-    well-known system file signatures.
-    """
-
-    ROOT_PATTERNS = [
-        r"root:.*:0:0:",            # /etc/passwd
-        r"\[boot\s*loader\]",       # Windows boot.ini
-        r";\s*for\s+16-bit\s+app",  # Windows win.ini
-    ]
-
-    @property
-    def vuln_type(self) -> str:
-        return "path_traversal"
-
-    def validate(self, response: dict[str, Any]) -> ValidationResult:
-        stdout = self._safe_get(response, "stdout")
-        for pattern in self.ROOT_PATTERNS:
-            match = re.search(pattern, stdout, re.IGNORECASE)
-            if match:
-                return ValidationResult(
-                    status=ValidationStatus.CONFIRMED,
-                    evidence=match.group(0),
-                    details={"pattern_matched": pattern},
-                )
-
-        # Partial: the script exited successfully but no root pattern found
-        exit_code = self._safe_get(response, "exit_code", -1)
-        if exit_code == 0 and stdout.strip():
-            return ValidationResult(
-                status=ValidationStatus.PARTIAL,
-                evidence=stdout[:200],
-                details={"note": "Script succeeded but no root-level content detected"},
-            )
-
-        return ValidationResult(
-            status=ValidationStatus.NOT_REPRODUCED,
-            details={"exit_code": exit_code},
-        )
-
-
-# ---------------------------------------------------------------------------
-# 2. Remote Code Execution (RCE)
+# 1. Remote Code Execution (RCE)
 # ---------------------------------------------------------------------------
 class RCEValidator(BaseValidator):
     """Confirms RCE by looking for a unique marker string in the output.
@@ -132,49 +86,7 @@ class RCEValidator(BaseValidator):
 
 
 # ---------------------------------------------------------------------------
-# 3. Local File Inclusion (LFI)
-# ---------------------------------------------------------------------------
-class LFIValidator(BaseValidator):
-    """Confirms LFI by checking for well-known file content signatures."""
-
-    FILE_SIGNATURES = [
-        r"root:.*:0:0:",                         # /etc/passwd
-        r"<\?php",                                # PHP source leak
-        r"DB_PASSWORD|DB_HOST|DB_NAME",           # .env / config
-        r"\[mysqld\]",                            # my.cnf
-        r"Listen\s+\d+|ServerRoot",               # Apache httpd.conf
-        r"server\s*\{",                           # nginx.conf block
-    ]
-
-    @property
-    def vuln_type(self) -> str:
-        return "lfi"
-
-    def validate(self, response: dict[str, Any]) -> ValidationResult:
-        stdout = self._safe_get(response, "stdout")
-
-        for sig in self.FILE_SIGNATURES:
-            match = re.search(sig, stdout, re.IGNORECASE)
-            if match:
-                return ValidationResult(
-                    status=ValidationStatus.CONFIRMED,
-                    evidence=match.group(0),
-                    details={"signature": sig},
-                )
-
-        exit_code = self._safe_get(response, "exit_code", -1)
-        if exit_code == 0 and len(stdout.strip()) > 20:
-            return ValidationResult(
-                status=ValidationStatus.PARTIAL,
-                evidence=stdout[:200],
-                details={"note": "Non-trivial output but no known file signature"},
-            )
-
-        return ValidationResult(status=ValidationStatus.NOT_REPRODUCED)
-
-
-# ---------------------------------------------------------------------------
-# 4. Server-Side Request Forgery (SSRF)
+# 2. Server-Side Request Forgery (SSRF)
 # ---------------------------------------------------------------------------
 class SSRFValidator(BaseValidator):
     """Confirms SSRF by checking for connection callback evidence.
@@ -214,7 +126,7 @@ class SSRFValidator(BaseValidator):
 
 
 # ---------------------------------------------------------------------------
-# 5. Insecure Deserialization
+# 3. Insecure Deserialization
 # ---------------------------------------------------------------------------
 class InsecureDeserializationValidator(BaseValidator):
     """Confirms insecure deserialization by checking for code execution evidence."""
@@ -250,53 +162,7 @@ class InsecureDeserializationValidator(BaseValidator):
 
 
 # ---------------------------------------------------------------------------
-# 6. Insecure Direct Object Reference (IDOR)
-# ---------------------------------------------------------------------------
-class IDORValidator(BaseValidator):
-    """Confirms IDOR by checking for unauthorized data access.
-
-    The PoC should output data that belongs to a different user /
-    resource than the authenticated principal.
-    """
-
-    EVIDENCE_PATTERNS = [
-        r"unauthorized[_\s-]*data",
-        r"IDOR_CONFIRMED",
-        r"different[_\s-]*user[_\s-]*data",
-        r"access[_\s-]*granted.*other",
-        r'"user_id"\s*:\s*"\d+"',  # JSON with different user id
-    ]
-
-    @property
-    def vuln_type(self) -> str:
-        return "idor"
-
-    def validate(self, response: dict[str, Any]) -> ValidationResult:
-        stdout = self._safe_get(response, "stdout")
-        exit_code = self._safe_get(response, "exit_code", -1)
-
-        for pat in self.EVIDENCE_PATTERNS:
-            match = re.search(pat, stdout, re.IGNORECASE)
-            if match:
-                return ValidationResult(
-                    status=ValidationStatus.CONFIRMED,
-                    evidence=match.group(0),
-                    details={"pattern_matched": pat},
-                )
-
-        # If the script reports success and returned substantial data
-        if exit_code == 0 and len(stdout.strip()) > 50:
-            return ValidationResult(
-                status=ValidationStatus.PARTIAL,
-                evidence=stdout[:200],
-                details={"note": "Script succeeded with data, manual review needed"},
-            )
-
-        return ValidationResult(status=ValidationStatus.NOT_REPRODUCED)
-
-
-# ---------------------------------------------------------------------------
-# 7. Arbitrary File Read/Write
+# 4. Arbitrary File Read/Write
 # ---------------------------------------------------------------------------
 class ArbitraryFileRWValidator(BaseValidator):
     """Confirms arbitrary file read/write by checking for file operation success."""
@@ -331,7 +197,7 @@ class ArbitraryFileRWValidator(BaseValidator):
 
 
 # ---------------------------------------------------------------------------
-# 8. Denial of Service (DoS)
+# 5. Denial of Service (DoS)
 # ---------------------------------------------------------------------------
 class DoSValidator(BaseValidator):
     """Confirms DoS by checking for response time degradation.
@@ -391,41 +257,7 @@ class DoSValidator(BaseValidator):
 
 
 # ---------------------------------------------------------------------------
-# 9. Cross-Site Scripting (XSS)
-# ---------------------------------------------------------------------------
-class XSSValidator(BaseValidator):
-    """Confirms reflected/stored XSS by checking for unescaped payload in HTML."""
-
-    PAYLOAD_PATTERNS = [
-        r"<script[^>]*>.*?</script>",
-        r"on(load|error|click|mouseover)\s*=",
-        r"javascript\s*:",
-        r"<img[^>]+onerror\s*=",
-        r"<svg[^>]+onload\s*=",
-        r"XSS_CONFIRMED",
-    ]
-
-    @property
-    def vuln_type(self) -> str:
-        return "xss"
-
-    def validate(self, response: dict[str, Any]) -> ValidationResult:
-        stdout = self._safe_get(response, "stdout")
-
-        for pat in self.PAYLOAD_PATTERNS:
-            match = re.search(pat, stdout, re.IGNORECASE | re.DOTALL)
-            if match:
-                return ValidationResult(
-                    status=ValidationStatus.CONFIRMED,
-                    evidence=match.group(0)[:200],
-                    details={"pattern_matched": pat},
-                )
-
-        return ValidationResult(status=ValidationStatus.NOT_REPRODUCED)
-
-
-# ---------------------------------------------------------------------------
-# 10. Command Injection
+# 6. Command Injection
 # ---------------------------------------------------------------------------
 class CommandInjectionValidator(BaseValidator):
     """Confirms OS command injection by looking for a marker in the response.
@@ -466,15 +298,11 @@ class CommandInjectionValidator(BaseValidator):
 # Auto-registration
 # ---------------------------------------------------------------------------
 _ALL_VALIDATORS: list[type[BaseValidator]] = [
-    PathTraversalValidator,
     RCEValidator,
-    LFIValidator,
     SSRFValidator,
     InsecureDeserializationValidator,
-    IDORValidator,
     ArbitraryFileRWValidator,
     DoSValidator,
-    XSSValidator,
     CommandInjectionValidator,
 ]
 

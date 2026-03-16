@@ -9,12 +9,12 @@ A Claude plugin for automated security vulnerability verification of open-source
 This plugin automates the full vulnerability analysis lifecycle:
 
 1. **Target Extraction** — Analyze a GitHub repository to identify the project type and metadata
-2. **Environment Setup** — Auto-detect stack, provision databases, build isolated environment
+2. **Environment Setup** — Auto-detect stack, build Docker container, verify health
 3. **Vulnerability Analysis** — Scan for known CVEs and code-level vulnerabilities
 4. **PoC Generation** — Write exploit scripts for each identified vulnerability
-5. **Reproduction** — Execute PoC scripts against the containerized target
-6. **Retry Loop** — Auto-fix failures (up to 5 retries per vulnerability)
-7. **Validation** — Run type-specific validators for final confirmation
+5. **Environment Init** — Deploy trigger binary, start TCP listeners, set up file monitors
+6. **Reproduction + Validation** — Execute PoCs, legitimacy check (anti-cheat), type-specific validation
+7. **Retry Loop** — Auto-fix failures, re-initialize monitors (up to 5 retries per vulnerability)
 8. **Report Delivery** — Generate a comprehensive Markdown report
 
 ## Supported Vulnerability Types
@@ -110,6 +110,7 @@ vuln-analysis/
 │   ├── poc_generation.md
 │   ├── reproduction.md
 │   ├── retry_loop.md
+│   ├── validation_framework.md            #   Unified PoC validation framework
 │   └── report_delivery.md
 │
 ├── core/                                  # Python framework
@@ -117,7 +118,7 @@ vuln-analysis/
 │   ├── runner.py                         #   PoC script runner
 │   ├── validators/
 │   │   ├── base.py                       #   Base validator class
-│   │   └── registry.py                   #   10 concrete validators
+│   │   └── registry.py                   #   6 concrete validators
 │   ├── reporters/
 │   │   ├── markdown.py                   #   Markdown report generator
 │   │   └── json_summary.py              #   JSON summary generator
@@ -171,7 +172,7 @@ git clone https://github.com/shaobaobaoer/vuln-analysis-with-validation-plugin.g
 /vuln-scan https://github.com/example/vulnerable-app
 ```
 
-This runs the complete 8-step pipeline and produces all artifacts in `workspace/`.
+This runs the complete 9-step pipeline and produces all artifacts in `workspace/`.
 
 ### Individual Steps
 

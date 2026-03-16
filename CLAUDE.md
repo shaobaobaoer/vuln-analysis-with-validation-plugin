@@ -89,18 +89,21 @@ This is a Claude plugin for automated security vulnerability verification of ope
 
 ## Pipeline Steps
 
-1. **Target Extraction** → `workspace/target.json`
-2. **Environment Setup** → `workspace/Dockerfile`
-3. **Vulnerability Analysis** → `workspace/vulnerabilities.json`
-4. **PoC Generation** → `workspace/poc_scripts/`
-5. **Environment Init** → Deploy trigger binary, start listeners, set up monitors
-6. **Reproduction** → Execute PoCs + legitimacy check + type-specific validation → `workspace/results.json`
-7. **Retry Loop** → Max 5 retries per vulnerability (re-initialize monitors each retry)
-8. **Report** → `workspace/report/REPORT.md`
+1. **Target Extraction** (mandatory) → `workspace/target.json`
+2. **Environment Setup** (mandatory) → `workspace/Dockerfile`, `workspace/docker-compose.yml`
+3. **Docker Readiness Gate** (mandatory) → Verify target app runs correctly inside Docker
+4. **Vulnerability Analysis** (mandatory) → `workspace/vulnerabilities.json`
+5. **PoC Generation** → `workspace/poc_scripts/`
+6. **Environment Init** → Deploy trigger binary, start listeners, set up monitors
+7. **Reproduction + Validation** → Execute PoCs + legitimacy check + type-specific validation → `workspace/results.json`
+8. **Retry Loop** → Max 5 retries per vulnerability (re-initialize monitors each retry)
+9. **Report** → `workspace/report/REPORT.md`
+
+**Abort conditions**: Steps 1-4 failing = pipeline abort. No fallback, no skip.
 
 ## Available Commands
 
-- `/vuln-scan` — Full 8-step pipeline against a GitHub repository
+- `/vuln-scan` — Full 9-step pipeline against a GitHub repository
 - `/env-setup` — Docker environment setup only
 - `/poc-gen` — PoC script generation only
 - `/reproduce` — Reproduction and validation only
@@ -135,7 +138,7 @@ vuln-analysis/
 ├── requirements.txt
 ├── .gitignore
 ├── commands/                    # Slash commands (5 commands)
-│   ├── vuln-scan.md             #   /vuln-scan — full 8-step pipeline
+│   ├── vuln-scan.md             #   /vuln-scan — full 9-step pipeline
 │   ├── env-setup.md             #   /env-setup — environment setup only
 │   ├── poc-gen.md               #   /poc-gen — PoC generation only
 │   ├── reproduce.md             #   /reproduce — reproduction + retry
@@ -153,14 +156,14 @@ vuln-analysis/
 │   ├── builder/AGENT.md         #   Environment setup (sonnet)
 │   ├── exploiter/AGENT.md       #   PoC execution + retry (opus)
 │   └── reporter/AGENT.md        #   Report generation (sonnet)
-├── templates/                   # Prompt templates (7 pipeline steps)
+├── templates/                   # Prompt templates (8 files)
 ├── core/                        # Python framework
 │   ├── pipeline.py              #   Pipeline orchestrator
 │   ├── runner.py                #   PoC script runner
-│   ├── validators/              #   Base + 10 concrete validators
+│   ├── validators/              #   Base + 6 concrete validators
 │   ├── reporters/               #   Markdown + JSON reporters
 │   └── runners/                 #   Docker manager
 └── examples/
     ├── dockerfiles/             #   Example Docker configs
-    └── poc_scripts/             #   10 example PoC scripts
+    └── poc_scripts/             #   6 example PoC scripts
 ```
