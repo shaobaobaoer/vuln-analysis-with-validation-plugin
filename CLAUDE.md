@@ -81,15 +81,21 @@ This is a Claude plugin for automated security vulnerability verification of ope
 - JSON for machine-readable summaries
 - Include: executive summary, per-vuln details, reproduction steps, remediation
 
+### 6. Validation Framework
+- All PoC validation uses the unified framework in `templates/validation_framework.md`
+- Three outcomes: `[SUCCESS]`, `[FAILED]`, `[INVALID]`
+- Anti-cheat legitimacy check: PoC must exploit through the target app, not call system APIs directly
+- Shared infrastructure: trigger binary (`/tmp/invoke`), flag file (`/tmp/flag`), TCP listeners (ports 59875/59876), `inotifywait`
+
 ## Pipeline Steps
 
 1. **Target Extraction** → `workspace/target.json`
 2. **Environment Setup** → `workspace/Dockerfile`
 3. **Vulnerability Analysis** → `workspace/vulnerabilities.json`
 4. **PoC Generation** → `workspace/poc_scripts/`
-5. **Reproduction** → `workspace/results.json`
-6. **Retry Loop** → Max 5 retries per vulnerability
-7. **Validation** → Type-specific validators
+5. **Environment Init** → Deploy trigger binary, start listeners, set up monitors
+6. **Reproduction** → Execute PoCs + legitimacy check + type-specific validation → `workspace/results.json`
+7. **Retry Loop** → Max 5 retries per vulnerability (re-initialize monitors each retry)
 8. **Report** → `workspace/report/REPORT.md`
 
 ## Available Commands

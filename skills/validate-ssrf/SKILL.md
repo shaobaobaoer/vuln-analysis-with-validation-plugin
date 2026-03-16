@@ -1,50 +1,79 @@
 ---
 name: validate-ssrf
-description: Validate SSRF vulnerabilities by injecting internal URLs and detecting outbound server requests via listeners or response content.
+description: Validate SSRF by injecting internal URLs to make the server connect to a local TCP listener on port 59876. Anti-cheat ensures the connection originates from the server, not the PoC script.
 origin: vuln-analysis
 ---
 
 # Validator: Server-Side Request Forgery (SSRF)
 
-Confirm whether a vulnerability allows making the server send requests to unintended destinations.
+Confirm whether a vulnerability allows making the server send requests to internal destinations, verified by a TCP listener on port 59876.
 
 ## When to Activate
 
 - An SSRF vulnerability needs validation during reproduction (Step 5/7)
 
-## Validation Logic
+## Prerequisites (set up before PoC execution)
 
-1. Set up a detection mechanism (HTTP listener, internal metadata endpoint, or known local service)
-2. Construct SSRF payloads:
-   - Direct: `http://127.0.0.1:PORT/`
-   - IP bypass: `http://0.0.0.0:PORT/`, `http://[::1]:PORT/`
-   - DNS rebinding: domain resolving to 127.0.0.1
-3. Inject the payload into the vulnerable parameter
-4. Check for listener connection, internal data in response, or timing differences
+```bash
+# Start TCP listener on port 59876 (SSRF-specific)
+docker exec -d <container> sh -c 'timeout 60 nc -l -p 59876 > /tmp/ssrf_result.txt 2>&1 &'
+```
 
-## Confirmation Criteria
+## Success Criteria
 
-| Status | Condition |
+| Result | Condition |
 |--------|-----------|
-| **CONFIRMED** | Server makes request to attacker-controlled destination, or internal data returned |
-| **PARTIAL** | URL was fetched but content is filtered/stripped |
-| **NOT_REPRODUCED** | No outbound request; URL rejected or not fetched |
+| **[SUCCESS]** | Listener on port 59876 receives any TCP connection AND legitimacy check passes |
+| **[FAILED]** | Listener receives nothing within timeout |
+| **[INVALID]** | PoC script itself connects to 127.0.0.1:59876 instead of making the server do it |
+
+## Attack Vector Examples
+
+The PoC must inject an internal URL through the target app's vulnerable parameter to make the **server** connect to the listener:
+
+| Technique | Payload Example |
+|-----------|----------------|
+| Direct | `http://127.0.0.1:59876` |
+| Localhost | `http://localhost:59876` |
+| IPv6 loopback | `http://[::1]:59876` |
+| Hex IP | `http://0x7f000001:59876` |
+| Decimal IP | `http://2130706433:59876` |
+| Zero IP | `http://0.0.0.0:59876` |
+| DNS rebinding | Custom domain resolving to 127.0.0.1 |
+
+## Legitimacy Check (Anti-Cheat)
+
+Scan the PoC script source code. The result is `[INVALID]` if:
+
+- The PoC script itself makes a request to `127.0.0.1:59876` or `localhost:59876`
+- The PoC script opens a TCP socket to port 59876
+- Any `requests.get("http://127.0.0.1:59876")` or equivalent called directly (not as a payload string passed to the target app)
+
+**Rule**: The internal URL must be sent as a **parameter value** to the target application, which then makes the outbound request. The PoC only sends requests to the target app's public endpoint.
+
+Example:
+- VALID: `requests.post(target_url, data={"url": "http://127.0.0.1:59876"})` — URL injected as parameter
+- INVALID: `requests.get("http://127.0.0.1:59876")` — PoC directly connects
+
+## Verification
+
+```bash
+# Check if listener received any connection
+docker exec <container> cat /tmp/ssrf_result.txt | grep -c . | xargs -I{} test {} -gt 0 && echo "[SUCCESS]" || echo "[FAILED]"
+```
 
 ## Confidence Scoring (1-10)
 
 | Score | Scenario |
 |-------|----------|
-| 9-10 | Listener receives connection from server, internal data returned |
-| 7-8 | Response contains internal service data (e.g., metadata endpoint) |
-| 4-6 | URL is fetched but content is fully stripped; timing differences only |
+| 9-10 | Listener receives connection from the server, verified via connection log |
+| 7-8 | Response contains internal service data (metadata endpoint, internal page) |
+| 4-6 | URL is fetched but content is stripped; only timing differences |
 | 1-3 | No evidence of outbound request |
 
-**Threshold: Only mark CONFIRMED if Confidence >= 7**
+**Threshold: Only mark [SUCCESS] if Confidence >= 7 AND listener received connection**
 
-## False Positive Checks
+## Hard Exclusions
 
-- Verify the request originates from the server, not the client
-- Ensure response data is from the internal target, not cached/default content
-- **Hard Exclusion**: SSRF controlling only the path (not host/protocol) is NOT a vulnerability
-- **Hard Exclusion**: SSRF in client-side JS/TS is NOT valid (can't bypass firewalls)
-- **Hard Exclusion**: SSRF findings in `.html` files are excluded
+- SSRF controlling only the **path** (not host/protocol) is NOT a vulnerability
+- SSRF in client-side JS/TS is NOT valid (can't bypass firewalls from client)

@@ -26,12 +26,20 @@ Based on the diagnosis:
 - **TIMING**: Increase wait times, add retry logic, extend timeouts
 - **NOT_VULNERABLE**: Mark as `NOT_REPRODUCED` with explanation, skip further retries
 
-### 3. Re-execute
+### 3. Re-initialize Monitoring
+Before re-executing, reset the validation infrastructure:
+- Clean up marker files: `docker exec <container> rm -f /tmp/poc_result.txt /tmp/ssrf_result.txt /tmp/inotify_result.txt /tmp/deserialized_flag`
+- Restart TCP listeners (ports 59875/59876) as needed
+- Restart `inotifywait` if testing file R/W
+
+### 4. Re-execute
 - Rebuild the container if Dockerfile was modified (use `uv` for Python deps)
 - Copy updated PoC script into the container: `docker cp`
 - Re-run the specific failed PoC script **inside Docker**: `docker exec <container> python3 /app/poc_scripts/<script>`
 - NEVER run Python on the host — always use `docker exec`
-- Record the new result
+- Run legitimacy check on the updated PoC source code
+- Run type-specific validation check (see `templates/validation_framework.md`)
+- Record the new result with outcome: `[SUCCESS]`, `[FAILED]`, or `[INVALID]`
 
 ## Retry Policy
 - Maximum retries: **5** per vulnerability

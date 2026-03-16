@@ -1,50 +1,77 @@
 ---
 name: validate-rce
-description: Validate remote code execution vulnerabilities using unique marker injection through eval, exec, template injection, and other vectors.
+description: Validate remote code execution by verifying /tmp/invoke execution via TCP listener on port 59875. Anti-cheat legitimacy check ensures exploit goes through the target app's vulnerable code path.
 origin: vuln-analysis
 ---
 
 # Validator: Remote Code Execution (RCE)
 
-Confirm whether a vulnerability allows arbitrary code execution on the server.
+Confirm whether a vulnerability allows arbitrary code execution on the server by triggering `/tmp/invoke` — a binary that sends `test_message` to port 59875.
 
 ## When to Activate
 
 - An RCE vulnerability needs validation during reproduction (Step 5/7)
 
-## Validation Logic
+## Prerequisites (set up before PoC execution)
 
-1. Generate a unique marker: `VULN_MARKER_<random_hex>`
-2. Construct payloads to echo the marker:
-   - Direct: `echo VULN_MARKER_abc123`
-   - Via eval: `__import__('os').system('echo VULN_MARKER_abc123')`
-   - Template injection: `{{config.__class__.__init__.__globals__['os'].popen('echo VULN_MARKER_abc123').read()}}`
-3. Send the payload through the vulnerable vector
-4. Check the response or side-effects for the unique marker
+```bash
+# Deploy trigger binary
+docker cp trigger.linux <container>:/tmp/invoke
+docker exec <container> chmod +x /tmp/invoke
 
-## Confirmation Criteria
+# Start TCP listener on port 59875
+docker exec -d <container> sh -c 'timeout 60 nc -l -p 59875 > /tmp/poc_result.txt 2>&1 &'
+```
 
-| Status | Condition |
+## Success Criteria
+
+| Result | Condition |
 |--------|-----------|
-| **CONFIRMED** | Unique marker appears in response body, headers, or observable output |
-| **PARTIAL** | Signs of execution (timing, error messages) but marker not visible |
-| **NOT_REPRODUCED** | No evidence of code execution |
+| **[SUCCESS]** | Listener on port 59875 receives `test_message` AND legitimacy check passes |
+| **[FAILED]** | Listener receives nothing within timeout |
+| **[INVALID]** | PoC script directly calls system execution APIs (os.system, subprocess, etc.) |
+
+## Attack Vector Examples
+
+The PoC must inject code through the target app's vulnerable entry point to execute `/tmp/invoke`:
+
+| Vector | Example Payload (sent TO the target app) |
+|--------|------------------------------------------|
+| Python eval | `__import__('os').system('/tmp/invoke')` |
+| Template injection | `{{config.__class__.__init__.__globals__['os'].popen('/tmp/invoke')}}` |
+| YAML unsafe load | `!!python/object/apply:os.system ['/tmp/invoke']` |
+| PHP eval | `system('/tmp/invoke');` |
+| Node.js eval | `require('child_process').execSync('/tmp/invoke')` |
+
+## Legitimacy Check (Anti-Cheat)
+
+Scan the PoC script source code. If ANY of these patterns appear as **direct calls** (not as payload strings), the result is `[INVALID]`:
+
+| Language | Forbidden Direct Calls |
+|----------|----------------------|
+| Python | `os.system(...)`, `subprocess.run(...)`, `subprocess.call(...)`, `subprocess.Popen(...)` |
+| Node.js | `child_process.exec(...)`, `child_process.execSync(...)` |
+| Java | `Runtime.exec(...)`, `ProcessBuilder(...)` |
+| PHP | `system(...)`, `shell_exec(...)`, `exec(...)` |
+
+**Important**: These patterns are only forbidden when called directly by the PoC script's own logic. They are VALID when embedded as **string payloads** sent to the target application. Example:
+- VALID: `payload = "__import__('os').system('/tmp/invoke')"; requests.post(url, data=payload)`
+- INVALID: `os.system('/tmp/invoke')` called directly in the PoC
+
+## Verification
+
+```bash
+# Check if listener received the message
+docker exec <container> cat /tmp/poc_result.txt | grep -q "test_message" && echo "[SUCCESS]" || echo "[FAILED]"
+```
 
 ## Confidence Scoring (1-10)
 
 | Score | Scenario |
 |-------|----------|
-| 9-10 | Unique marker appears in response, verified with second marker |
-| 7-8 | Command execution confirmed via timing (sleep) or file creation side-effect |
+| 9-10 | `test_message` received on port 59875, legitimacy check passed |
+| 7-8 | Execution evidence via timing/side-effects but message not received |
 | 4-6 | Error messages suggest code interpretation but no execution proof |
-| 1-3 | Theoretical path only, no observable execution |
+| 1-3 | No evidence of code execution |
 
-**Threshold: Only mark CONFIRMED if Confidence >= 7**
-
-## False Positive Checks
-
-- Marker must be unique enough to not appear naturally
-- Verify with a second, different marker for consistency
-- Check that marker does not appear in baseline (non-exploit) responses
-- **Precedent**: `eval()` in client-side JS/TS is NOT server-side RCE
-- **Precedent**: Command injection in shell scripts is generally not exploitable without untrusted user input
+**Threshold: Only mark [SUCCESS] if Confidence >= 7 AND `test_message` received**
