@@ -1,70 +1,22 @@
 # Retry & Fix Loop Template
 
-You are a debugging specialist. When vulnerability reproduction fails, diagnose the cause and fix the **PoC scripts or Docker environment**.
+> **Agent**: `agents/exploiter/AGENT.md §Phase 6`
+> **Validation flow**: `templates/validation_framework.md`
 
-> **Scope**: "Fix" here means fixing the PoC script, Dockerfile, or environment — NEVER the target project's source code. This pipeline does not patch vulnerabilities. If a PoC fails, it's a problem with the PoC or the environment, not something to "fix" in the target.
+When vulnerability reproduction fails, diagnose the cause and fix the PoC scripts or Docker environment. NEVER fix the target project's source code.
 
-## Input
-- Failed reproduction results from Step 7
-- Original Dockerfile, PoC scripts, and vulnerability details
+## Diagnosis Categories
+| Diagnosis | Fix Strategy |
+|-----------|-------------|
+| `ENTRY_POINT_NOT_FOUND` | Re-analyze source, find correct entry point, or mark NOT_REPRODUCED |
+| `ENV_ISSUE` | Modify Dockerfile, add packages, fix startup |
+| `POC_BUG` | Fix PoC script logic, imports, assertions |
+| `PARAM_MISMATCH` | Update endpoint, parameter names, payload format |
+| `TIMING` | Increase wait times, add retry logic |
+| `NOT_VULNERABLE` | Mark as NOT_REPRODUCED, skip further retries |
 
-## Instructions
-Analyze the failure and apply fixes to the PoC/environment in this priority order:
-
-### 1. Diagnose Failure Category
-- **ENV_ISSUE** — Container environment is misconfigured (missing deps, wrong version, service not starting)
-- **POC_BUG** — PoC script has logical errors (wrong endpoint, bad payload format, incorrect assertions)
-- **PARAM_MISMATCH** — Vulnerability parameters are incorrect (wrong path, param name, or trigger condition)
-- **TIMING** — Service not ready or request timeout too short
-- **NOT_VULNERABLE** — The specific version is genuinely not vulnerable
-
-### 2. Apply Fix
-Based on the diagnosis:
-- **ENV_ISSUE**: Modify Dockerfile — add missing packages, fix version pins, adjust startup command
-- **POC_BUG**: Fix the PoC script — correct the request format, update assertions, fix URL paths
-- **PARAM_MISMATCH**: Update vulnerability parameters — adjust payload, change target endpoint
-- **TIMING**: Increase wait times, add retry logic, extend timeouts
-- **NOT_VULNERABLE**: Mark as `NOT_REPRODUCED` with explanation, skip further retries
-
-### 3. Re-initialize Monitoring
-Before re-executing, reset the validation infrastructure:
-- Clean up marker files: `docker exec <container> rm -f /tmp/poc_result.txt /tmp/ssrf_result.txt /tmp/inotify_result.txt /tmp/deserialized_flag`
-- Restart TCP listeners (ports 59875/59876) as needed
-- Restart `inotifywait` if testing file R/W
-
-### 4. Re-execute
-- Rebuild the container if Dockerfile was modified (use `uv` for Python deps)
-- Copy updated PoC script into the container: `docker cp`
-- Re-run the specific failed PoC script **inside Docker**: `docker exec <container> python3 /app/poc_scripts/<script>`
-- NEVER run Python on the host — always use `docker exec`
-- Run legitimacy check on the updated PoC source code
-- Run type-specific validation check (see `templates/validation_framework.md`)
-- Record the new result with outcome: `[SUCCESS]`, `[FAILED]`, or `[INVALID]`
-
-## Retry Policy
-- Maximum retries: **5** per vulnerability
-- If max retries exceeded: mark as `MAX_RETRIES` and include all attempted fixes in the report
-- Each retry must apply a DIFFERENT fix (no duplicate attempts)
-
-## Output Format (JSON)
-```json
-{
-  "vuln_id": "VULN-001",
-  "retry_count": 3,
-  "attempts": [
-    {
-      "attempt": 1,
-      "diagnosis": "ENV_ISSUE",
-      "fix_applied": "Added libxml2-dev to Dockerfile",
-      "result": "NOT_REPRODUCED"
-    },
-    {
-      "attempt": 2,
-      "diagnosis": "POC_BUG",
-      "fix_applied": "Changed POST to GET, fixed endpoint path",
-      "result": "CONFIRMED"
-    }
-  ],
-  "final_status": "CONFIRMED"
-}
-```
+## Retry Rules
+- Max **5 retries** per vulnerability
+- Each retry must apply a **different** fix
+- **Re-initialize monitoring** before each re-execution (restart listeners, clean markers)
+- Re-run legitimacy check + type-specific validation after each attempt

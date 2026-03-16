@@ -85,60 +85,7 @@ This is a Claude plugin for automated security vulnerability verification of ope
 
 ### 5. Docker Resource Labeling & Cleanup
 
-All Docker resources (containers, images, networks, volumes) created by the pipeline MUST be labeled with the pipeline ID for safe, targeted cleanup.
-
-**Label convention**:
-- Label key: `vuln-analysis.pipeline-id`
-- Label value: the pipeline's `pipeline_id` (e.g., `vuln-a1b2c3d4`)
-
-**Applying labels**:
-```dockerfile
-# In Dockerfile
-LABEL vuln-analysis.pipeline-id="vuln-a1b2c3d4"
-```
-```bash
-# In docker run
-docker run --label "vuln-analysis.pipeline-id=vuln-a1b2c3d4" ...
-```
-```yaml
-# In docker-compose.yml
-services:
-  app:
-    labels:
-      vuln-analysis.pipeline-id: "vuln-a1b2c3d4"
-```
-
-**Safe cleanup** (only removes resources belonging to THIS pipeline run):
-```bash
-PIPELINE_ID="vuln-a1b2c3d4"
-
-# 1. Stop and remove containers
-docker ps -aq --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker rm -f
-
-# 2. Remove images
-docker images -q --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker rmi -f
-
-# 3. Remove networks
-docker network ls -q --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker network rm
-
-# 4. Remove volumes
-docker volume ls -q --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker volume rm
-```
-
-**FORBIDDEN cleanup commands** (too aggressive, will destroy other running containers):
-```bash
-docker system prune              # Kills ALL unused resources across the system
-docker container prune           # Kills ALL stopped containers, not just ours
-docker image prune -a            # Kills ALL unused images
-docker rm -f $(docker ps -aq)    # Kills ALL containers
-docker-compose down -v --rmi all # Removes images that may be shared
-```
-
-**When to clean up**:
-- After Step 9 (report) completes successfully
-- On pipeline abort (Steps 1-4 failure)
-- On `--restart` before beginning a new run
-- NEVER during active PoC execution (Steps 7-8)
+All Docker resources MUST be labeled with `vuln-analysis.pipeline-id=<pipeline_id>` for safe, targeted cleanup. NEVER use `docker system prune`, `docker container prune`, or any broad cleanup command — only filter-based cleanup targeting this pipeline's label. See `agents/orchestrator/AGENT.md` §Docker Resource Cleanup for full labeling/cleanup procedures.
 
 ### 6. Report Format
 - Markdown for human-readable reports
@@ -218,19 +165,7 @@ PoC scripts MUST exploit through the correct entry point:
 
 ## Code Security Review
 
-The `skills/code-security-review/` skill implements a mandatory 3-phase code audit process (integrated from `anthropics/claude-code-security-review`):
-
-1. **Phase 1 — Audit**: Context research, comparative analysis, vulnerability assessment
-2. **Phase 2 — Filter**: Hard exclusion regex pass → AI filtering (19 rules) → Precedent check (17 rules) → Confidence scoring (1-10, threshold >= 7)
-3. **Phase 3 — Report**: Filter table, detailed findings, excluded summary
-
-Resources in `skills/code-security-review/resources/`:
-- `audit-prompt.md` — Audit methodology and severity guidelines
-- `filtering-rules.md` — 19 hard exclusions, 17 precedents, confidence scale
-- `hard-exclusion-patterns.md` — Regex-based auto-exclusion patterns
-- `customization-guide.md` — Extension system for custom rules
-
-**Critical**: Phase 2 filtering is MANDATORY. Never output raw findings without filtering.
+Vulnerability analysis uses a mandatory 3-phase code audit: **Audit → Filter → Report**. Phase 2 filtering is MANDATORY — never output raw findings without filtering. See `skills/code-security-review/SKILL.md` for full methodology and `skills/code-security-review/resources/` for filtering rules.
 
 ## File Structure
 
