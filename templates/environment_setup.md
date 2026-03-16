@@ -120,8 +120,8 @@ Execute loaded sub-modules in order:
 1. Create Docker network (`helpers/port-isolation.md`)
 2. Start databases (`db/*.md`) and wait for readiness
 3. Build application (`app/*.md`)
-4. For Python projects with `NEEDS_CONDA=true`: use `scripts/setup_python_env.sh`
-5. For ML projects: run `scripts/install_ml_deps.sh` for GPU/CPU dependency handling
+4. **For all Python projects**: install `uv` in the container and use `uv pip install` / `uv sync` for dependency management. NEVER use `pip install` directly.
+5. For ML projects: run `scripts/install_ml_deps.sh` for GPU/CPU dependency handling (using `uv pip install` for Python packages)
 6. Environment drift protection: integrate `scripts/env_guard.sh`
 
 ### Step 5: Verify
@@ -170,29 +170,40 @@ Write `${PROJECT_DIR}/ENVIRONMENT_SETUP.md` using `output/status-output.md` temp
 
 When no Docker/compose exists and manual setup is not possible, generate a Dockerfile:
 
-| Language | Base Image |
-|----------|-----------|
-| Python | `python:3.12-slim` |
-| Node.js | `node:20-slim` |
-| Go | `golang:1.22-alpine` |
-| Java | `eclipse-temurin:21-jdk` |
-| Ruby | `ruby:3.3-slim` |
-| PHP | `php:8.3-apache` |
+| Language | Base Image | Package Manager |
+|----------|-----------|-----------------|
+| Python | `python:3.12-slim` | **`uv`** (mandatory) |
+| Node.js | `node:20-slim` | npm/yarn/pnpm |
+| Go | `golang:1.22-alpine` | go mod |
+| Java | `eclipse-temurin:21-jdk` | Maven/Gradle |
+| Ruby | `ruby:3.3-slim` | bundler |
+| PHP | `php:8.3-apache` | composer |
 
-### Dockerfile Template
+**Python projects MUST use `uv`** for all dependency management. Never use `pip install` or `conda install` directly.
+
+### Dockerfile Template (Python — using `uv`)
 ```dockerfile
-FROM <base_image>
+FROM python:3.12-slim
 WORKDIR /app
+
+# Install system deps + uv
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl gcc && rm -rf /var/lib/apt/lists/*
+    curl gcc && rm -rf /var/lib/apt/lists/* \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+# Install Python dependencies via uv
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --system -r requirements.txt
+
 COPY . .
 EXPOSE <port>
 HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
     CMD curl -f http://localhost:<port>/health || exit 1
 CMD ["python", "app.py"]
 ```
+
+**IMPORTANT**: NEVER use `pip install` directly. Always use `uv pip install`. If the project has `pyproject.toml`, prefer `uv sync` instead.
 
 ## Environment Isolation Principles
 

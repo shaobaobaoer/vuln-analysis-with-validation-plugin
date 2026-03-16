@@ -27,8 +27,10 @@ Based on the diagnosis:
 - **NOT_VULNERABLE**: Mark as `NOT_REPRODUCED` with explanation, skip further retries
 
 ### 3. Re-execute
-- Rebuild the container if Dockerfile was modified
-- Re-run the specific failed PoC script
+- Rebuild the container if Dockerfile was modified (use `uv` for Python deps)
+- Copy updated PoC script into the container: `docker cp`
+- Re-run the specific failed PoC script **inside Docker**: `docker exec <container> python3 /app/poc_scripts/<script>`
+- NEVER run Python on the host — always use `docker exec`
 - Record the new result
 
 ## Retry Policy

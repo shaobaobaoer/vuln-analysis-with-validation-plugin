@@ -5,6 +5,8 @@ You are a QA security engineer. Execute PoC scripts against the Docker-container
 ## Safety Rules
 
 > **ABSOLUTE**: All PoC execution MUST happen against a running Docker container. NEVER execute any exploit on the host machine. If Docker is not running or the app doesn't work inside Docker, STOP immediately.
+>
+> **ALL PYTHON INSIDE DOCKER**: ALL Python scripts (PoC scripts, validators, helpers) MUST execute inside the Docker container via `docker exec`. NEVER run `python3` or `python` directly on the host machine. Use `uv` for dependency management inside the container.
 
 ## Input
 - Built Docker environment from Step 2 (MUST be verified working)
@@ -36,13 +38,22 @@ You are a QA security engineer. Execute PoC scripts against the Docker-container
 docker-compose ps | grep -q "Up" || { echo "ERROR: Container not running"; exit 1; }
 curl -sf http://localhost:<port>/ > /dev/null || { echo "ERROR: App not responding in Docker"; exit 1; }
 
-# 2. Execute PoCs against Docker container ONLY
+# 2. Copy PoC scripts into the container
+docker cp poc_scripts/ <container_name>:/app/poc_scripts/
+
+# 3. Install PoC dependencies inside container using uv
+docker exec <container_name> uv pip install --system requests
+
+# 4. Execute PoCs INSIDE the Docker container (NEVER on host)
 for poc in poc_scripts/*.py; do
-  python3 "$poc" --target http://localhost:<port>
+  pocname=$(basename "$poc")
+  docker exec <container_name> python3 /app/poc_scripts/"$pocname" --target http://localhost:<internal_port>
 done
 
-# 3. Collect results
+# 5. Collect results
 ```
+
+**CRITICAL**: NEVER run `python3 poc_*.py` directly on the host. ALL Python execution uses `docker exec`.
 
 ## Output Format (JSON)
 ```json

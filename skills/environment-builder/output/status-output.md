@@ -128,7 +128,7 @@ source <PROJECT_DIR>/venv/bin/activate
 ### 执行的关键步骤
 
 1. <步骤1：如"创建 conda 环境 setup_xxx，Python 3.10">
-2. <步骤2：如"pip install -r requirements.txt，使用清华源">
+2. <步骤2：如"uv pip install -r requirements.txt（在 Docker 容器内）">
 3. <步骤3：如"启动 PostgreSQL 容器，端口 5432">
 4. <步骤4：如"执行数据库迁移 python manage.py migrate">
 5. ...

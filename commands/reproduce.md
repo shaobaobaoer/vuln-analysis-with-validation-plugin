@@ -9,6 +9,8 @@ Execute PoC scripts against the Docker-containerized target and verify reproduct
 ## Safety Rules
 
 - **Docker-only**: ALL PoC execution MUST happen against a running Docker container. NEVER run exploits on the host.
+- **All Python inside Docker**: ALL Python scripts (PoC, validators) MUST execute inside the container via `docker exec`. NEVER run `python3` on the host.
+- **Use `uv`**: Python dependencies in the container are managed with `uv` (never pip directly).
 - **Pre-flight check**: Docker container MUST be running AND the target app MUST respond before any PoC execution.
 
 ## Usage

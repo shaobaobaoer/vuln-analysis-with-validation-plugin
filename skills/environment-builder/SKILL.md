@@ -258,21 +258,30 @@ When no Docker/compose exists and manual setup is not possible, generate a Docke
 | Ruby | `ruby:3.3-slim` |
 | PHP | `php:8.3-apache` |
 
-### Dockerfile Template
+### Dockerfile Template (Python — using `uv`)
 
 ```dockerfile
-FROM <base_image>
+FROM python:3.12-slim
 WORKDIR /app
+
+# Install system deps + uv
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl gcc && rm -rf /var/lib/apt/lists/*
+    curl gcc && rm -rf /var/lib/apt/lists/* \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+# Install Python dependencies via uv (NEVER use pip directly)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --system -r requirements.txt
+
 COPY . .
 EXPOSE <port>
 HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
     CMD curl -f http://localhost:<port>/health || exit 1
 CMD ["python", "app.py"]
 ```
+
+**IMPORTANT**: Always use `uv pip install` instead of `pip install`. If the project has `pyproject.toml`, prefer `uv sync`.
 
 ### Dockerfile Best Practices
 

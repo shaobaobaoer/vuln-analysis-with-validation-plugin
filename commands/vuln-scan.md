@@ -17,6 +17,8 @@ Run the complete vulnerability analysis pipeline against a GitHub repository.
 ## Safety Rules
 
 - **Docker-only**: All PoC execution happens inside Docker containers. NEVER run exploits on the host.
+- **All Python inside Docker**: ALL Python execution (PoC scripts, validators, helpers) MUST run inside the Docker container via `docker exec`. NEVER invoke `python3` on the host.
+- **Use `uv`**: All Python dependency management uses `uv` (never pip/conda/venv directly).
 - **Steps 1-4 are mandatory**: If any of Target Extraction, Environment Setup, Docker Readiness Gate, or Vulnerability Analysis fails, the pipeline aborts.
 - **Docker readiness gate**: The target app must be verified working inside Docker before any PoC execution begins.
 - **No auto-fix**: The pipeline never modifies the target project's source code. The retry loop only fixes PoC scripts and Docker setup.

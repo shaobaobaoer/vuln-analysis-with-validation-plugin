@@ -172,7 +172,8 @@ git clone https://github.com/shaobaobaoer/vuln-analysis-with-validation-plugin.g
 
 - Docker and docker-compose
 - Python 3.12+
-- `pip install -r requirements.txt`
+- [`uv`](https://github.com/astral-sh/uv) (Python package manager — used inside Docker containers)
+- `uv pip install -r requirements.txt` (all Python execution happens inside Docker)
 
 ## Quick Start
 

@@ -8,7 +8,8 @@ This is a Claude plugin for automated security vulnerability verification of ope
 - **Scope**: This pipeline does NOT fix or patch vulnerabilities. It identifies, reproduces, and reports them. Remediation advice in the report is recommendations only.
 - **Language**: Python 3.12+
 - **Dependencies**: `requests` (only external dependency)
-- **Execution**: All testing runs in isolated Docker containers
+- **Python package manager**: `uv` (NEVER use pip/conda/venv directly — always use `uv`)
+- **Execution**: All testing and Python execution runs in isolated Docker containers
 
 ## Safety Invariants (NEVER violate)
 
@@ -28,9 +29,19 @@ This is a Claude plugin for automated security vulnerability verification of ope
 
 5. **No host-side execution**: The following are FORBIDDEN on the host:
    - Running `python3 poc_*.py` directly on the host
+   - Running ANY Python script that is part of the analysis/testing process on the host
    - Using `curl`/`wget` to exploit host-local services that are NOT Docker containers
    - Executing any command injection, file write, or deserialization payload outside Docker
    - The ONLY permitted host-side actions are: building Docker images, starting/stopping containers, and sending HTTP requests to Docker-exposed ports
+
+6. **All Python execution inside Docker**: ANY Python code that needs to run during the analysis (PoC scripts, helper scripts, validators, JSON validators) MUST execute inside the Docker container. Use `docker exec` or `docker-compose exec` to run Python inside the container. NEVER invoke `python3` or `python` on the host for any pipeline step.
+
+7. **Use `uv` for Python environment management**: All Dockerfiles and container environments MUST use [`uv`](https://github.com/astral-sh/uv) as the Python package manager. NEVER use `pip install`, `conda install`, or `python -m venv` in Dockerfiles or inside containers. Use `uv` for all dependency installation:
+   - Install uv: `curl -LsSf https://astral.sh/uv/install.sh | sh` or `pip install uv` (bootstrap only)
+   - Create venv: `uv venv`
+   - Install deps: `uv pip install -r requirements.txt`
+   - Run scripts: `uv run python script.py`
+   - Sync project: `uv sync` (if pyproject.toml exists)
 
 ## Critical Rules
 
@@ -45,6 +56,8 @@ This is a Claude plugin for automated security vulnerability verification of ope
 - Minimal dependencies (standard library + `requests` only)
 - Each PoC script must be independently runnable
 - All scripts must include timeout control (default: 30s)
+- All Python scripts execute inside Docker — never on the host
+- Use `uv` for all Python dependency management (never pip/conda directly)
 
 ### 3. PoC Script Convention
 - Naming: `poc_<vuln_type>_<id>.py`
@@ -55,9 +68,10 @@ This is a Claude plugin for automated security vulnerability verification of ope
 
 ### 4. Environment Setup Convention
 - Auto-detect tech stack before building (Docker Compose > Dockerfile > manual setup)
-- Supports conda, venv, Docker Compose, and direct Dockerfile
+- **Python package management: always use `uv`** (never pip/conda/venv directly)
 - Database provisioning via Docker containers (PostgreSQL, MySQL, Redis, MongoDB)
 - All Dockerfiles must include HEALTHCHECK
+- All Dockerfiles for Python projects must install `uv` and use it for dependency management
 - Use `setup_` prefix for auto-created environments; never delete user environments
 - Mandatory: write `ENVIRONMENT_SETUP.md` after every environment build
 - Cleanup containers after testing
