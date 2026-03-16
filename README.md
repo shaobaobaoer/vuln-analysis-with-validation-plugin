@@ -21,16 +21,12 @@ This plugin automates the full vulnerability analysis lifecycle:
 
 | # | Type | Validator Skill |
 |---|------|----------------|
-| 1 | Path Traversal | `skills/validate-path-traversal/SKILL.md` |
-| 2 | RCE | `skills/validate-rce/SKILL.md` |
-| 3 | LFI | `skills/validate-lfi/SKILL.md` |
-| 4 | SSRF | `skills/validate-ssrf/SKILL.md` |
-| 5 | Insecure Deserialization | `skills/validate-insecure-deserialization/SKILL.md` |
-| 6 | IDOR | `skills/validate-idor/SKILL.md` |
-| 7 | Arbitrary File R/W | `skills/validate-arbitrary-file-rw/SKILL.md` |
-| 8 | DoS | `skills/validate-dos/SKILL.md` |
-| 9 | XSS | `skills/validate-xss/SKILL.md` |
-| 10 | Command Injection | `skills/validate-command-injection/SKILL.md` |
+| 1 | RCE | `skills/validate-rce/SKILL.md` |
+| 2 | SSRF | `skills/validate-ssrf/SKILL.md` |
+| 3 | Insecure Deserialization | `skills/validate-insecure-deserialization/SKILL.md` |
+| 4 | Arbitrary File R/W | `skills/validate-arbitrary-file-rw/SKILL.md` |
+| 5 | DoS | `skills/validate-dos/SKILL.md` |
+| 6 | Command Injection | `skills/validate-command-injection/SKILL.md` |
 
 ### Code Security Review
 
@@ -93,15 +89,11 @@ vuln-analysis/
 │   │       └── env_guard.sh              #       Env drift detection & recovery
 │   ├── vulnerability-scanner/SKILL.md    #   Step 3: vuln discovery (with filtering)
 │   ├── poc-writer/SKILL.md               #   Step 4: PoC script patterns
-│   ├── validate-path-traversal/SKILL.md  #   Validator: path traversal
 │   ├── validate-rce/SKILL.md             #   Validator: RCE
-│   ├── validate-lfi/SKILL.md             #   Validator: LFI
 │   ├── validate-ssrf/SKILL.md            #   Validator: SSRF
 │   ├── validate-insecure-deserialization/SKILL.md
-│   ├── validate-idor/SKILL.md            #   Validator: IDOR
 │   ├── validate-arbitrary-file-rw/SKILL.md
 │   ├── validate-dos/SKILL.md             #   Validator: DoS
-│   ├── validate-xss/SKILL.md             #   Validator: XSS
 │   └── validate-command-injection/SKILL.md
 │
 ├── agents/                                # Agent definitions (AGENT.md convention)
@@ -138,15 +130,11 @@ vuln-analysis/
     │   ├── node_webapp.Dockerfile
     │   └── docker-compose.example.yml
     ├── poc_scripts/                       # One example PoC per vuln type
-    │   ├── poc_path_traversal_001.py
     │   ├── poc_rce_001.py
-    │   ├── poc_lfi_001.py
     │   ├── poc_ssrf_001.py
     │   ├── poc_insecure_deser_001.py
-    │   ├── poc_idor_001.py
     │   ├── poc_arbitrary_file_rw_001.py
     │   ├── poc_dos_001.py
-    │   ├── poc_xss_001.py
     │   └── poc_command_injection_001.py
     └── poc_manifest.example.json
 ```

@@ -47,17 +47,15 @@ Follow the mandatory 3-phase process from `skills/code-security-review/SKILL.md`
 **Phase 3a — Raw Discovery**: Scan for dangerous patterns:
 - `eval()`, `exec()`, `system()` → RCE
 - `pickle.loads()`, `yaml.load()` → Insecure Deserialization
-- `open(user_input)` → Path Traversal / LFI / File R/W
+- `open(user_input)` with unsanitized paths → Arbitrary File R/W
 - `requests.get(user_url)` → SSRF
 - Shell string concatenation → Command Injection
-- Missing auth checks → IDOR
-- Unescaped template output → XSS
 - Unbounded regex/loops → DoS
 
 **Phase 3b — False Positive Filtering** (MANDATORY — never skip):
 1. Hard Exclusion Pass: Apply regex patterns from `hard-exclusion-patterns.md`
 2. AI Filtering: Apply 19 hard exclusion rules from `filtering-rules.md`
-3. Precedent Check: Apply 17 precedent rules (e.g., React is XSS-safe by default)
+3. Precedent Check: Apply 17 precedent rules
 4. Confidence Scoring: Score each finding 1-10, exclude findings < 7
 
 **Phase 3c — Prioritization**:

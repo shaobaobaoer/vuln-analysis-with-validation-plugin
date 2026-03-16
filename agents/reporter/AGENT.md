@@ -109,8 +109,7 @@ Generate `workspace/report/summary.json` conforming to the following schema:
   },
   "by_type": {
     "rce": 1,
-    "ssrf": 1,
-    "path_traversal": 1
+    "ssrf": 1
   },
   "top_findings": [
     {
@@ -218,15 +217,11 @@ Use these standard remediation templates when generating the remediation section
 
 | Type | Remediation Template |
 |------|---------------------|
-| `path_traversal` | Validate and sanitize file paths, use allowlists, reject `..` sequences |
 | `rce` | Remove eval/exec, use safe alternatives, sandbox execution |
-| `lfi` | Restrict file access to allowed directories, validate input |
 | `ssrf` | Implement URL allowlists, block internal IP ranges, validate schemes |
 | `insecure_deserialization` | Use safe serialization formats (JSON), validate before deserializing |
-| `idor` | Implement proper authorization checks, use indirect references |
 | `arbitrary_file_rw` | Restrict write paths, validate filenames, use tmpdir |
 | `dos` | Implement rate limiting, input size limits, timeouts |
-| `xss` | Escape output, use Content-Security-Policy, sanitize HTML |
 | `command_injection` | Use parameterized commands, avoid shell=True, validate input |
 
 ### Using the Library

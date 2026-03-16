@@ -102,7 +102,7 @@ This is a Claude plugin for automated security vulnerability verification of ope
 
 ## Vulnerability Types Covered
 
-path_traversal, rce, lfi, ssrf, insecure_deserialization, idor, arbitrary_file_rw, dos, xss, command_injection
+rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection
 
 ## Code Security Review
 
@@ -134,13 +134,13 @@ vuln-analysis/
 │   ├── poc-gen.md               #   /poc-gen — PoC generation only
 │   ├── reproduce.md             #   /reproduce — reproduction + retry
 │   └── report.md                #   /report — report generation only
-├── skills/                      # Skill modules (15 skills)
+├── skills/                      # Skill modules (11 skills)
 │   ├── target-extraction/       #   Step 1: target analysis
 │   ├── environment-builder/     #   Step 2: modular env setup (app/ db/ helpers/ scripts/)
 │   ├── vulnerability-scanner/   #   Step 3: vuln discovery with integrated filtering
 │   ├── code-security-review/    #   3-phase code audit (with resources/)
 │   ├── poc-writer/              #   Step 4: PoC script patterns
-│   └── validate-*/              #   10 type-specific validators
+│   └── validate-*/              #   6 type-specific validators
 ├── agents/                      # Agent definitions (5 agents)
 │   ├── orchestrator/AGENT.md    #   Pipeline coordinator (opus)
 │   ├── analyzer/AGENT.md        #   Target + vuln analysis (opus)

@@ -69,15 +69,11 @@ if __name__ == "__main__":
 
 | Type | Key Technique | Validation |
 |------|--------------|------------|
-| Path Traversal | `../` sequences, URL-encoded variants | Response contains `root:` |
 | RCE | Unique marker via eval/exec/template injection | Marker in response |
-| LFI | File path injection in parameters | File content in response |
 | SSRF | Internal URL injection + listener | Listener receives connection |
 | Insecure Deserialization | Malicious pickle/YAML payload | Marker file created |
-| IDOR | Cross-user resource access | Unauthorized data returned |
 | Arbitrary File R/W | Write marker, read it back | Marker file verified |
 | DoS | ReDoS, nested JSON, XML bomb | 10x response time increase |
-| XSS | Script/event handler injection | Unescaped payload in HTML |
 | Command Injection | Shell metacharacters + marker | Marker in response |
 
 ## Output

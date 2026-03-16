@@ -80,7 +80,7 @@ Examine code for these security categories:
 RAW FINDING #N
 - Title: <short title>
 - File: <path:line>
-- Category: <e.g. path_traversal, sql_injection, rce>
+- Category: <e.g. rce, ssrf, command_injection>
 - Severity: HIGH / MEDIUM / LOW
 - Description: <what the bug is>
 - Attack Path: <how an attacker exploits it step by step>
