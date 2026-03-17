@@ -25,4 +25,6 @@ Generate and build a Docker environment for a target project.
 - `workspace/Dockerfile`
 - `workspace/docker-compose.yml` (if multi-service)
 - `workspace/target.json`
-- Console output confirming successful build and startup
+- `workspace/build.log`
+- `workspace/ENVIRONMENT_SETUP.md` (**mandatory** — orchestrator validates this exists; step fails if absent)
+- Running, healthy Docker container

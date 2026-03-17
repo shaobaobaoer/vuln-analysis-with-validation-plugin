@@ -166,6 +166,25 @@ Based on detection results, **only read the relevant sub-module files**:
 
 ---
 
+## Test Harness Integrity (MANDATORY — Anti-Cheat Rule)
+
+> **Safety Invariant #9**: The environment builder MUST NOT add insecure code patterns to the test harness that do not exist in the original repository.
+
+When generating a test harness (e.g., a Flask wrapper for a library target), every HTTP endpoint MUST:
+- Call only functions/classes that exist in the original target source code
+- NOT introduce `exec()`, `eval()`, `pickle.loads()`, `subprocess.run(shell=True)`, or similar dangerous patterns unless they already exist in the target
+
+**Before writing any test harness file, verify**:
+```
+For each endpoint in the harness:
+  Does this call a function from the original cloned repo? → YES: allowed
+  Does this add new insecure behavior not in the original? → YES: FORBIDDEN — remove it
+```
+
+Violations manufacture fake vulnerabilities and invalidate the entire pipeline run.
+
+---
+
 ## Step 3: Build
 
 Execute loaded sub-modules in order:

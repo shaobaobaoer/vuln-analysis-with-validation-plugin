@@ -22,10 +22,12 @@ You are a security documentation specialist. You produce clear, actionable vulne
 ### Phase 1: Data Collection
 Read all workspace artifacts:
 - `workspace/target.json` — project metadata, repo URL, entry points
-- `workspace/vulnerabilities.json` — full list of identified vulnerabilities with severity and entry point
+- `workspace/vulnerabilities.json` — full list of identified vulnerabilities with severity, entry point, and `known_disclosures[]`
 - `workspace/results.json` — reproduction status per vulnerability (CONFIRMED / NOT_REPRODUCED / ERROR)
 - `workspace/poc_manifest.json` — index of PoC scripts (optional — report must NOT depend on it for reproduction steps)
 - `workspace/poc_scripts/poc_*.py` — **Read each PoC script source code directly** to extract the exact payload, target endpoint, and execution command used. This is the authoritative source for the "Payload used" and "Execute PoC" reproduction blocks. The manifest is a secondary index only.
+
+**`known_disclosures[]` rendering rule**: For each vulnerability, read its `known_disclosures` array from `workspace/vulnerabilities.json`. If non-empty, render a "Prior Disclosures" subsection. If empty (`[]`), render `> No prior public disclosures found for this vulnerability pattern.`
 
 > **Self-contained reproduction rule**: The report MUST be fully reproducible without needing to read the manifest. Every CONFIRMED vulnerability's reproduction block is derived from the PoC script source code, not from `poc_manifest.json`. A reader should be able to follow REPORT.md alone to reproduce every finding.
 
@@ -72,6 +74,9 @@ If either file is missing, the reporter MUST re-attempt generation or report fai
 - PoC scripts appendix includes execution instructions via `docker exec` (NEVER host-side `python3`)
 - **Every vulnerability clearly states its entry point** (type: `library_api` / `webapp_endpoint` / `cli_command`, path, access level)
 - **Every vulnerability explains the call chain** from the public entry point to the vulnerable code (how an attacker reaches it)
+- **Every vulnerability has a "Prior Disclosures" subsection** — populated from `known_disclosures[]` or explicitly states "No prior public disclosures found"
+- **CVE field is populated** from `known_disclosures[]` when a matching CVE exists; not left as `N/A` if a CVE was found
+- **`summary.json` includes `known_disclosures_summary`** block with `total_prior_disclosures`, `cve_ids`, `huntr_ids`, `unpatched_in_scanned_version`
 - **Step 9 is not complete until `workspace/report/REPORT.md` and `workspace/report/summary.json` physically exist** — verify with the shell command in Phase 5 before declaring success
 
 ## Severity Rating Algorithm
@@ -130,6 +135,14 @@ Generate `workspace/report/summary.json` conforming to the following schema:
     "rce": 1,
     "ssrf": 1
   },
+  "known_disclosures_summary": {
+    "total_prior_disclosures": 3,
+    "sources": ["nvd", "huntr"],
+    "cve_ids": ["CVE-2024-12345"],
+    "huntr_ids": ["https://huntr.com/bounties/xxxx-xxxx"],
+    "unpatched_in_scanned_version": 1,
+    "already_patched": 2
+  },
   "top_findings": [
     {
       "id": "VULN-001",
@@ -141,7 +154,8 @@ Generate `workspace/report/summary.json` conforming to the following schema:
         "type": "webapp_endpoint",
         "path": "POST /api/exec",
         "access_level": "public"
-      }
+      },
+      "known_disclosure": "CVE-2024-12345"
     }
   ]
 }
@@ -159,7 +173,8 @@ Generate `workspace/report/summary.json` conforming to the following schema:
 - `confirmed` / `not_reproduced` / `partial` — Breakdown by reproduction status
 - `by_severity` — Count of confirmed vulnerabilities per severity tier
 - `by_type` — Count of confirmed vulnerabilities per vulnerability type
-- `top_findings` — Array of the most significant findings, ordered by severity
+- `known_disclosures_summary` — Aggregated stats from prior CVE/huntr/advisory research; `total_prior_disclosures` = 0 is valid when no prior reports exist
+- `top_findings` — Array of the most significant findings, ordered by severity; `known_disclosure` key is the top-level CVE/Huntr ID for that finding, or `null` if none
 
 ## REPORT.md Template Structure
 
@@ -204,11 +219,31 @@ until curl -sf http://localhost:<host_port>/ > /dev/null 2>&1; do sleep 2; done
 - **Severity**: CRITICAL/HIGH/MEDIUM/LOW
 - **Status**: CONFIRMED
 - **Affected Component**: <file:line or endpoint>
-- **CVE**: <CVE-ID or N/A>
+- **CVE**: <CVE-ID if found in known_disclosures, else N/A>
 - **Entry Point Type**: `library_api` / `webapp_endpoint` / `cli_command`
 - **Entry Point Path**: <e.g., `POST /api/exec`, `sample_lib.parse()`, `tool --input`>
 - **Access Level**: public / authenticated / admin
 - **Call Chain**: <route/function → handler → vulnerable_code>
+
+#### Prior Disclosures
+
+<!-- RENDERING RULE — strictly conditional, DO NOT output placeholder rows:
+  IF known_disclosures is non-empty → render a real table (one row per entry from the array)
+  IF known_disclosures is [] → output the "no disclosures" line only
+-->
+
+**[If known_disclosures is non-empty — replace this block with the real table]:**
+
+| Source | ID | Title | Affected Versions | Fixed In | CVSS | Status | Link |
+|--------|----|-------|-------------------|----------|------|--------|------|
+| *(entry.source)* | *(entry.id)* | *(entry.title)* | *(entry.affected_versions)* | *(entry.fixed_version or N/A)* | *(entry.cvss or N/A)* | *(entry.status)* | [view](*(entry.url)*) |
+
+If any entry has `status: fixed` AND scanned version >= `fixed_version`:
+> ⚠️ **Patched in `<fixed_version>`. Verify whether the scanned version `<target_version>` is still within the affected range.**
+
+**[If known_disclosures is [] — replace this block with:]:**
+
+> No prior public disclosures found for this vulnerability pattern across NVD, Huntr, GitHub Advisories, OSV, and Snyk.
 
 #### Description
 <detailed description of the vulnerability and its impact>

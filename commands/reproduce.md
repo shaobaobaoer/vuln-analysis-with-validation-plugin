@@ -37,7 +37,12 @@ Execute PoC scripts against the Docker-containerized target and verify reproduct
    - Diagnose: ENTRY_POINT_NOT_FOUND / ENV_ISSUE / POC_BUG / PARAM_MISMATCH / TIMING / NOT_VULNERABLE
    - Apply fix and re-execute
 8. Save results to `workspace/results.json` with statuses: `CONFIRMED`, `NOT_REPRODUCED`, `ERROR`, `MAX_RETRIES`
-9. Cleanup containers after completion
+9. Cleanup Docker resources using label-based cleanup (NEVER `docker system prune`):
+   ```bash
+   PIPELINE_ID=$(jq -r '.pipeline_id' workspace/pipeline_state.json 2>/dev/null || echo "unknown")
+   docker ps -aq --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker rm -f
+   docker images -q --filter "label=vuln-analysis.pipeline-id=${PIPELINE_ID}" | xargs -r docker rmi -f
+   ```
 
 ## Output
 

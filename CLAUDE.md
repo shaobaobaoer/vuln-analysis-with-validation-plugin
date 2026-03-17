@@ -51,6 +51,14 @@ This is a Claude plugin for automated security vulnerability verification of ope
    - Any action that packages or uploads the built image outside the local machine
    - The pipeline ONLY builds images locally via `docker build` and runs them via `docker run` / `docker-compose up`. Built images are ephemeral testing artifacts, not distributable packages.
 
+9. **No manufactured vulnerabilities (Anti-Cheat — ABSOLUTE)**: The pipeline MUST ONLY find vulnerabilities that exist in the original target codebase. The following are STRICTLY FORBIDDEN:
+   - Adding `exec()`, `eval()`, `pickle.loads()`, `subprocess.run(shell=True)`, or any other insecure patterns to the test harness, Dockerfile, or any wrapper code that do not exist in the original repository
+   - Creating new HTTP endpoints, CLI subcommands, or library methods in the test harness that introduce insecure behavior not present in the original code
+   - "Discovering" vulnerabilities in code the pipeline itself wrote
+   - Any finding that traces back to builder-generated code (Dockerfile, test harness, wrapper scripts) rather than the original target source is INVALID and MUST be excluded
+   - The test harness serves ONE purpose: expose the target application's existing functionality to the network/process boundary for testing. It MUST NOT add new functionality or insecure behavior.
+   - **Self-check**: Before writing any `vulnerabilities.json` entry, the analyzer MUST verify: "Does this vulnerable code pattern exist in a file that was part of the original git clone?" If NO — exclude it.
+
 ## Critical Rules
 
 ### 1. Authorization
