@@ -41,3 +41,6 @@ docker-compose.override.yml
 
 # PoC evidence (may contain sensitive data)
 evidence/
+
+# Analyzer run artifacts (logs, workspace dirs, scripts, CSVs from pipeline runs)
+analyzer/

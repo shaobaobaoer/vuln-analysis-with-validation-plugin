@@ -82,7 +82,7 @@ After identifying the project type, enumerate all public entry points. These def
     {
       "type": "library_api|webapp_endpoint|cli_command",
       "path": "module.function()|POST /api/exec|tool --input",
-      "access_level": "public|authenticated|admin",
+      "access_level": "none|auth|admin",
       "parameters": ["param1", "param2"],
       "source_file": "app/views.py:42"
     }
@@ -100,7 +100,7 @@ After identifying the project type, enumerate all public entry points. These def
 |-------|-------------|
 | `type` | One of: `library_api`, `webapp_endpoint`, `cli_command` |
 | `path` | How to invoke: function signature, HTTP endpoint, or CLI syntax |
-| `access_level` | `public` (no auth), `authenticated` (requires login), `admin` (requires admin) |
+| `access_level` | `none` (no auth required), `auth` (requires login/token), `admin` (requires admin privileges) |
 | `parameters` | User-controllable parameters at this entry point |
 | `source_file` | Source file and line where this entry point is defined |
 

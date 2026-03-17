@@ -59,7 +59,8 @@ Example:
 
 ```bash
 # Check if listener received any connection
-docker exec <container> cat /tmp/ssrf_result.txt | grep -c . | xargs -I{} test {} -gt 0 && echo "[SUCCESS]" || echo "[FAILED]"
+result=$(docker exec <container> cat /tmp/ssrf_result.txt 2>/dev/null)
+[ -n "$result" ] && echo "[SUCCESS]" || echo "[FAILED]"
 ```
 
 ## Confidence Scoring (1-10)
