@@ -16,7 +16,7 @@ Perform a security-focused code review to identify **HIGH-CONFIDENCE** security 
 2. **AVOID NOISE**: Skip theoretical issues, style concerns, or low-impact findings
 3. **FOCUS ON IMPACT**: Prioritize vulnerabilities that could lead to unauthorized access, data breaches, or system compromise
 4. **EXCLUSIONS**: Do NOT report the following issue types:
-   - Denial of Service (DOS) vulnerabilities, even if they allow service disruption
+   - **Generic** Denial of Service: rate limiting, volumetric flooding, resource exhaustion from sustained traffic. **Exception**: Algorithmic/single-request DOS (ReDoS, XML bomb, hash collision, deeply nested input) ARE valid — report these as `dos` type.
    - Secrets or sensitive data stored on disk (these are handled by other processes)
    - Rate limiting or resource exhaustion issues
 
@@ -24,42 +24,24 @@ Perform a security-focused code review to identify **HIGH-CONFIDENCE** security 
 
 ## Security Categories to Examine
 
-### Input Validation Vulnerabilities
-- SQL injection via unsanitized user input
-- Command injection in system calls or subprocesses
-- XXE injection in XML parsing
-- Template injection in templating engines (SSTI)
-- NoSQL injection in database queries
-- Path traversal in file operations
+### Supported Vulnerability Types (Pipeline Output)
 
-### Authentication & Authorization Issues
-- Authentication bypass logic
-- Privilege escalation paths
-- Session management flaws
-- JWT token vulnerabilities
-- Authorization logic bypasses
+Findings MUST map to one of these 6 types. Findings that cannot be mapped are excluded.
 
-### Crypto & Secrets Management
-- Hardcoded API keys, passwords, or tokens
-- Weak cryptographic algorithms or implementations
-- Improper key storage or management
-- Cryptographic randomness issues
-- Certificate validation bypasses
+| Type Key | What to Look For |
+|----------|-----------------|
+| `rce` | `eval()`, `exec()`, `system()`, template injection (SSTI), dynamic code execution, sandbox escape |
+| `command_injection` | `os.system(f"cmd {user_input}")`, `subprocess.call(shell=True)`, shell string concatenation |
+| `insecure_deserialization` | `pickle.loads()`, `yaml.load()` (unsafe), `unserialize()`, `Marshal.load()` |
+| `ssrf` | `requests.get(user_url)`, URL fetching without allowlist, DNS rebinding |
+| `arbitrary_file_rw` | `open(user_input)`, path traversal, zip slip, unrestricted file upload, LFI |
+| `dos` | ReDoS, XML bomb, hash collision, deeply nested JSON/XML, single-request algorithmic complexity |
 
-### Injection & Code Execution
-- Remote code execution via deserialization
-- Pickle injection in Python
-- YAML deserialization vulnerabilities
-- Eval injection in dynamic code execution
-- XSS vulnerabilities in web applications (reflected, stored, DOM-based)
+### Additional Categories (for context, but findings must map to the 6 types above)
 
-### Data Exposure
-- Sensitive data logging or storage
-- PII handling violations
-- API endpoint data leakage
-- Debug information exposure
+- SQL injection, XXE, XSS, auth bypass, secrets exposure — scan for these during Phase 1 discovery, but they are **not supported output types**. If found, check if they can be mapped (e.g., Code Injection → `rce`, Path Traversal → `arbitrary_file_rw`). If unmappable, exclude.
 
-### Additional Notes
+### Notes
 - Even if something is only exploitable from the local network, it can still be a HIGH severity issue
 
 ---
@@ -84,6 +66,18 @@ Perform a security-focused code review to identify **HIGH-CONFIDENCE** security 
 - Look for privilege boundaries being crossed unsafely
 - Identify injection points and unsafe deserialization
 
+### Phase 4 — Entry Point Reachability (MANDATORY)
+- For each finding, trace a call path from a **public entry point** (public API, HTTP route, CLI argument) to the vulnerable code
+- Classify as `reachable` / `conditional` / `not_reachable`
+- **EXCLUDE** all `not_reachable` findings — they are not exploitable
+- See `CLAUDE.md §Entry Point Reachability` for language-specific rules
+
+### Phase 5 — Intended Functionality Check (MANDATORY)
+- Assess whether the exploitable behavior **exceeds the designed purpose** of the API
+- If the API is designed to perform the "dangerous" operation (e.g., `download_from_url()` fetching URLs → SSRF is by design), **EXCLUDE** the finding
+- If the behavior is outside the API's design intent (e.g., `info()` allowing command injection), **KEEP** the finding
+- See `filtering-rules.md §Intended Functionality Exclusion` for decision matrix and rules
+
 ---
 
 ## Output Format
@@ -107,14 +101,16 @@ Perform a security-focused code review to identify **HIGH-CONFIDENCE** security 
 | **MEDIUM** | Vulnerabilities requiring specific conditions but with significant impact |
 | **LOW** | Defense-in-depth issues or lower-impact vulnerabilities |
 
-## Confidence Scoring
+## Confidence Scoring (1-10 Scale)
 
 | Score | Meaning |
 |-------|---------|
-| 0.9-1.0 | Certain exploit path identified, tested if possible |
-| 0.8-0.9 | Clear vulnerability pattern with known exploitation methods |
-| 0.7-0.8 | Suspicious pattern requiring specific conditions to exploit |
-| Below 0.7 | **Don't report** (too speculative) |
+| 9-10 | Certain exploit path identified, tested if possible |
+| 7-8 | Clear vulnerability pattern with known exploitation methods |
+| 4-6 | Suspicious pattern requiring specific conditions — **EXCLUDE** (below threshold) |
+| 1-3 | Speculative or theoretical — **EXCLUDE** |
+
+> **Threshold**: Only report findings with confidence >= 7. Do NOT use a 0.0-1.0 scale.
 
 ---
 
@@ -124,7 +120,7 @@ Focus on HIGH and MEDIUM findings only. Better to miss some theoretical issues t
 
 ## Important Exclusions — Do NOT Report
 
-- Denial of Service (DOS) vulnerabilities or resource exhaustion attacks
+- **Generic** DOS: rate limiting, volumetric flooding, sustained resource exhaustion. (**Exception**: algorithmic/single-request DOS like ReDoS, XML bomb — these ARE valid `dos` findings)
 - Secrets/credentials stored on disk (managed separately)
 - Rate limiting concerns or service overload scenarios
 - Memory consumption or CPU exhaustion issues

@@ -137,7 +137,11 @@ Automatically exclude findings matching:
 18. Unavailable internal dependencies
 19. Non-vulnerability crashes
 
-### Step 2c — Precedent Check (17 Precedents)
+### Step 2c — Intended Functionality Check
+
+Assess whether the exploitable behavior **exceeds the designed purpose** of the API. If the API is designed to perform the "dangerous" operation (e.g., `download_from_url()` fetching arbitrary URLs), the finding is by design — not a vulnerability. Apply rules from `resources/filtering-rules.md §Intended Functionality Exclusion`.
+
+### Step 2d — Precedent Check (17 Precedents)
 
 Apply specific guidance:
 
@@ -159,7 +163,7 @@ Apply specific guidance:
 16. **Path traversal in HTTP requests**: `../` in HTTP requests is not a problem.
 17. **Log query injection**: Only report if definitely exposing sensitive data to external users.
 
-### Step 2d — Confidence Scoring
+### Step 2e — Confidence Scoring
 
 | Score | Meaning | Action |
 |-------|---------|--------|

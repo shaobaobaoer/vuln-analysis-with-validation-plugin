@@ -70,8 +70,9 @@ For each raw finding, trace the call chain from the vulnerable code BACK to a pu
 1. Hard Exclusion Pass: Apply regex patterns from `hard-exclusion-patterns.md`
 2. AI Filtering: Apply 19 hard exclusion rules from `filtering-rules.md`
 3. Entry Point Reachability Filter: Apply rules from `filtering-rules.md` §Entry Point Reachability Filter
-4. Precedent Check: Apply 17 precedent rules
-5. Confidence Scoring: Score each finding 1-10, exclude findings < 7 (reachability adjusts confidence ±2/±3)
+4. Intended Functionality Check: Apply rules from `filtering-rules.md` §Intended Functionality Exclusion — exclude findings where the exploitable behavior matches the API's designed purpose (e.g., `download_from_url()` doing SSRF is by design, not a vulnerability)
+5. Precedent Check: Apply 17 precedent rules
+6. Confidence Scoring: Score each finding 1-10, exclude findings < 7 (reachability/intended-functionality adjusts confidence)
 
 **Phase 3d — Prioritization**:
 Rank by: severity > reachability > exploitability > impact > confidence (threshold >= 7)
@@ -93,6 +94,7 @@ Every finding in `workspace/vulnerabilities.json` MUST have its `type` field set
 ```json
 {
   "project_name": "example-project",
+  "project_type": "library|webapp|cli",
   "language": "python",
   "framework": "flask",
   "version": "1.2.3",

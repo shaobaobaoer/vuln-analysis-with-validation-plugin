@@ -66,19 +66,18 @@ After identifying the project type, enumerate all public entry points. These def
 
 ## Output Schema
 
+> Must align with `agents/analyzer/AGENT.md §workspace/target.json Schema`.
+
 ```json
 {
-  "name": "string",
-  "type": "library|webapp|cli",
-  "version": "string",
-  "language": "string",
-  "repo_url": "string",
-  "entry_point": "string",
-  "dependencies": ["string"],
-  "description": "string",
-  "tech_stack": ["string"],
-  "exposed_ports": [8080],
-  "has_dockerfile": true,
+  "project_name": "example-project",
+  "project_type": "library|webapp|cli",
+  "version": "1.2.3",
+  "language": "python",
+  "framework": "flask",
+  "repo_url": "https://github.com/owner/repo",
+  "dependencies": ["flask", "requests"],
+  "attack_surface": "Description of the attack surface",
   "entry_points": [
     {
       "type": "library_api|webapp_endpoint|cli_command",
@@ -90,6 +89,10 @@ After identifying the project type, enumerate all public entry points. These def
   ]
 }
 ```
+
+**Required fields**: `project_name`, `language`, `entry_points` (non-empty array of objects).
+
+**Field naming**: Use `project_name` (not `name`), `project_type` (not `type` at top level — `type` is reserved for entry point objects).
 
 ### Entry Point Fields
 

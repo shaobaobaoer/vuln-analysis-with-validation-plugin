@@ -17,15 +17,24 @@ Additionally, **file-level rules** apply:
 
 ## Pattern Groups
 
-### 1. DOS / Resource Exhaustion
+### 1. Generic DOS / Resource Exhaustion
 
 **Exclusion Reason**: `Generic DOS/resource exhaustion finding (low signal)`
 
+> **Exception**: Algorithmic/single-request DOS (ReDoS, XML bomb, hash collision, deeply nested input) are NOT excluded — they are valid `dos` type findings. Only generic rate-limiting and volumetric DOS are excluded here.
+
 ```regex
-\b(denial of service|dos attack|resource exhaustion)\b                    [IGNORECASE]
+\b(resource exhaustion)\b                                                  [IGNORECASE]
 \b(exhaust|overwhelm|overload).*?(resource|memory|cpu)\b                  [IGNORECASE]
 \b(infinite|unbounded).*?(loop|recursion)\b                               [IGNORECASE]
 ```
+
+**NOT excluded by this group** (valid `dos` findings):
+- ReDoS / catastrophic backtracking
+- XML bomb / billion laughs
+- Hash collision attacks
+- Deeply nested JSON/XML causing parser exhaustion
+- Single-request algorithmic complexity attacks
 
 ### 2. Rate Limiting
 
@@ -78,13 +87,14 @@ Additionally, **file-level rules** apply:
 \barbitrary.?(memory read|pointer dereference|memory address|memory pointer)\b [IGNORECASE]
 ```
 
-### 6. Regex Injection / ReDoS
+### 6. Regex Injection
 
 **Exclusion Reason**: `Regex injection finding (not applicable)`
 
+> **Note**: Only regex **injection** (injecting untrusted content into a regex) is excluded. ReDoS (catastrophic backtracking from crafted input against a vulnerable regex) is a valid `dos` finding and is NOT excluded by this group.
+
 ```regex
 \b(regex|regular expression)\s+injection\b                               [IGNORECASE]
-\b(regex|regular expression)\s+denial of service\b                       [IGNORECASE]
 \b(regex|regular expression)\s+flooding\b                                [IGNORECASE]
 ```
 
@@ -140,10 +150,11 @@ In Python, these patterns are pre-compiled using `re.compile()` with `re.IGNOREC
 import re
 from typing import List, Pattern
 
-_DOS_PATTERNS: List[Pattern] = [
-    re.compile(r'\b(denial of service|dos attack|resource exhaustion)\b', re.IGNORECASE),
+_GENERIC_DOS_PATTERNS: List[Pattern] = [
+    re.compile(r'\b(resource exhaustion)\b', re.IGNORECASE),
     re.compile(r'\b(exhaust|overwhelm|overload).*?(resource|memory|cpu)\b', re.IGNORECASE),
     re.compile(r'\b(infinite|unbounded).*?(loop|recursion)\b', re.IGNORECASE),
+    # NOTE: "denial of service" and "dos attack" removed — algorithmic DOS (ReDoS, XML bomb) is a valid finding
 ]
 
 # Check a finding:

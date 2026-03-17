@@ -16,7 +16,7 @@ You must maintain high recall (don't miss real vulnerabilities) while improving 
 
 Automatically exclude findings matching these patterns:
 
-1. **Denial of Service (DOS)** vulnerabilities or resource exhaustion attacks.
+1. **Generic Denial of Service (DOS)**: Rate limiting, volumetric flooding, resource exhaustion from sustained high traffic. **Exception**: Algorithmic/single-request DOS (ReDoS, XML bomb, hash collision, deeply nested input) that triggers worst-case behavior with a single crafted request — these are KEPT as `dos` type findings.
 2. **Secrets/credentials stored on disk** — these are managed separately.
 3. **Rate limiting concerns** or service overload scenarios. Services do not need to implement rate limiting.
 4. **Memory consumption or CPU exhaustion** issues.
@@ -30,7 +30,7 @@ Automatically exclude findings matching these patterns:
 12. **Log spoofing.** Outputting un-sanitized user input to logs is not a vulnerability.
 13. **SSRF controlling only the path.** SSRF is only a concern if it can control the host or protocol.
 14. **AI prompt injection.** Including user-controlled content in AI system prompts is not a vulnerability.
-15. **Regex injection.** Injecting untrusted content into a regex is not a vulnerability. Regex DOS is also excluded.
+15. **Regex injection.** Injecting untrusted content into a regex is not a vulnerability. **Exception**: ReDoS (catastrophic backtracking from crafted input against a vulnerable regex) IS a valid `dos` finding — do not exclude it.
 16. **Insecure documentation.** Do not report findings in documentation files such as markdown files.
 17. **Missing audit logs.** A lack of audit logs is not a vulnerability.
 18. **Unavailable internal dependencies.** Depending on internal libraries that are not publicly available is not a vulnerability.
@@ -76,6 +76,46 @@ NOT REACHABLE example:
       ↑ NOT called from any public API function
         = NOT REACHABLE → EXCLUDE
 ```
+
+---
+
+## Intended Functionality Exclusion (MANDATORY)
+
+A finding is only a valid vulnerability if the exploitable behavior **exceeds the designed purpose** of the entry point API. If the API is designed to perform the operation that constitutes the "vulnerability," it is working as intended — not a security flaw.
+
+### Core Principle
+
+> **Vulnerability = capability that the API was NOT designed to provide.**
+>
+> If the API's documented purpose already encompasses the "dangerous" operation, the finding is **by design**, not a bug.
+
+### Decision Matrix
+
+| API Designed Purpose | Observed Behavior | Vulnerability? | Reasoning |
+|---------------------|-------------------|---------------|-----------|
+| Logging / info display | Command injection via log input | **YES** | Command execution is not part of logging |
+| Data parsing / formatting | RCE via `eval()` on parsed input | **YES** | Code execution is not part of parsing |
+| Template rendering | SSTI leading to RCE | **YES** | Arbitrary code execution is not part of rendering |
+| URL downloading / fetching | SSRF to internal services | **NO** | Fetching URLs is the API's designed purpose |
+| Code execution / eval | Arbitrary code execution | **NO** | Running code is the API's designed purpose |
+| File I/O with user-specified paths | Arbitrary file read/write | **NO** | File access with user paths is the designed behavior |
+| Deserialization with `trust_remote=True` | Loading untrusted remote objects | **NO** | The parameter explicitly opts into trusting remote sources |
+| Shell command builder | Command injection | **NO** | Constructing shell commands is the API's purpose |
+
+### Application Rules
+
+1. **Read the API's docstring/name/signature first**: Understand what the function is *supposed* to do before judging whether the behavior is anomalous.
+2. **Opt-in trust parameters**: If the API has explicit trust parameters (e.g., `trust_remote=True`, `allow_pickle=True`, `safe=False`), behavior enabled by those parameters is **by design**. The user explicitly opted in.
+3. **Scope escalation**: If the API's designed capability is limited (e.g., "read config files from a fixed directory") but the exploit escapes that scope (e.g., path traversal to read `/etc/passwd`), that IS a vulnerability — the behavior exceeds the designed scope.
+4. **Side-channel exploitation**: If an API designed for purpose A can be abused to achieve unrelated purpose B (e.g., a logging function that allows RCE), that IS a vulnerability — purpose B is entirely outside the design intent.
+
+### Confidence Adjustment
+
+| Situation | Adjustment |
+|-----------|------------|
+| Exploitable behavior clearly outside API's designed purpose | **+2 confidence** |
+| Exploitable behavior arguably within API's designed scope | **-3 confidence** |
+| Behavior enabled by explicit opt-in trust parameter | **auto-exclude** |
 
 ---
 
