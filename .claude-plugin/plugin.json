@@ -1,6 +1,6 @@
 {
   "name": "vuln-analysis",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Automated security vulnerability verification plugin for open-source libraries, web applications, and CLI tools. Runs a full 9-step pipeline: target extraction, environment setup, Docker readiness gate, vulnerability analysis with false positive filtering, PoC generation, environment init, reproduction with anti-cheat validation, retry loop, and report delivery.",
   "author": {
     "name": "jiunie"
