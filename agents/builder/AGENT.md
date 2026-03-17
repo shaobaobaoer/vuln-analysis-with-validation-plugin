@@ -107,7 +107,7 @@ Only load the sub-modules needed for this project.
 Run `scripts/health_check.sh` — outputs READY / PARTIAL / FAILED.
 
 ### Step 5: Document (MANDATORY — NEVER skip)
-Write `${PROJECT_DIR}/ENVIRONMENT_SETUP.md` using `output/status-output.md` template.
+Write `workspace/ENVIRONMENT_SETUP.md` using `output/status-output.md` template.
 **This step is NOT optional.** The orchestrator will check for this file's existence as part of inter-step validation. If it is missing, the step is considered FAILED.
 
 ## Output
@@ -115,4 +115,4 @@ Write `${PROJECT_DIR}/ENVIRONMENT_SETUP.md` using `output/status-output.md` temp
 - `workspace/Dockerfile` (if generated)
 - `workspace/docker-compose.yml` (if multi-service)
 - `workspace/build.log`
-- `${PROJECT_DIR}/ENVIRONMENT_SETUP.md` (mandatory documentation)
+- `workspace/ENVIRONMENT_SETUP.md` (mandatory documentation)

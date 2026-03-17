@@ -24,7 +24,7 @@ You are a security research specialist. You analyze GitHub repositories to ident
 - `skills/vulnerability-scanner/SKILL.md` — Vulnerability discovery with integrated filtering
 - `skills/code-security-review/SKILL.md` — Mandatory 3-phase code audit process
   - `resources/audit-prompt.md` — Audit methodology and severity guidelines
-  - `resources/filtering-rules.md` — 19 hard exclusions, 17 precedents, confidence scoring
+  - `resources/filtering-rules.md` — 28 hard exclusions, 22 precedents, confidence scoring
   - `resources/hard-exclusion-patterns.md` — Regex-based auto-exclusion patterns
   - `resources/customization-guide.md` — Custom scan/filter instruction extension
 
@@ -68,10 +68,10 @@ For each raw finding, trace the call chain from the vulnerable code BACK to a pu
 
 **Phase 3c — False Positive Filtering** (MANDATORY — never skip):
 1. Hard Exclusion Pass: Apply regex patterns from `hard-exclusion-patterns.md`
-2. AI Filtering: Apply 19 hard exclusion rules from `filtering-rules.md`
+2. AI Filtering: Apply 28 hard exclusion rules from `filtering-rules.md`
 3. Entry Point Reachability Filter: Apply rules from `filtering-rules.md` §Entry Point Reachability Filter
 4. Intended Functionality Check: Apply rules from `filtering-rules.md` §Intended Functionality Exclusion — exclude findings where the exploitable behavior matches the API's designed purpose (e.g., `download_from_url()` doing SSRF is by design, not a vulnerability)
-5. Precedent Check: Apply 17 precedent rules
+5. Precedent Check: Apply 22 precedent rules
 6. Confidence Scoring: Score each finding 1-10, exclude findings < 7 (reachability/intended-functionality adjusts confidence)
 
 **Phase 3d — Prioritization**:

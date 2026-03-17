@@ -124,7 +124,7 @@ The pipeline ONLY supports these 6 vulnerability types. Any finding outside this
 - **Delegate to**: `exploiter` agent
 - **Pre-check**: Re-verify Docker container is running before executing any PoC
 - Execute PoCs inside Docker → legitimacy check (anti-cheat) → type-specific validation
-- Three possible outcomes per vulnerability: `[SUCCESS]`, `[FAILED]`, `[INVALID]`
+- Four possible PoC stdout markers: `[CONFIRMED]`, `[NOT_REPRODUCED]`, `[PARTIAL]`, `[ERROR]`
 - All execution happens against the Docker container — NEVER on the host
 - Output: `workspace/results.json`
 
@@ -416,7 +416,7 @@ Before advancing from one step to the next, the orchestrator MUST verify the fol
 - [ ] Docker container is running (`docker ps` shows it up)
 - [ ] Docker image and container are labeled: `docker inspect <container> | jq '.[0].Config.Labels["vuln-analysis.pipeline-id"]'` returns the pipeline ID
 - [ ] Dockerfile uses `uv` for Python deps (NOT `pip install`): `grep -c 'uv pip install\|uv sync' workspace/Dockerfile` > 0
-- [ ] `ENVIRONMENT_SETUP.md` exists in the project directory
+- [ ] `workspace/ENVIRONMENT_SETUP.md` exists
 - [ ] `workspace/build.log` exists
 
 ### After Step 4 → Before Step 5

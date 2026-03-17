@@ -17,7 +17,7 @@ Generate PoC scripts for vulnerabilities listed in `workspace/vulnerabilities.js
 1. Read `workspace/vulnerabilities.json`
 2. Use `skills/poc-writer/SKILL.md` for script generation patterns
 3. For each vulnerability, generate a standalone Python script:
-   - Naming: `poc_<type>_<id>.py`
+   - Naming: `poc_<type>_<NNN>.py` (3-digit zero-padded, e.g. `poc_rce_001.py`)
    - Args: `--target`, `--timeout`
    - Exit codes: 0=CONFIRMED, 1=NOT_REPRODUCED, 2=ERROR
 4. Write scripts to `workspace/poc_scripts/`
@@ -26,5 +26,5 @@ Generate PoC scripts for vulnerabilities listed in `workspace/vulnerabilities.js
 
 ## Output
 
-- `workspace/poc_scripts/poc_<type>_<id>.py` per vulnerability
+- `workspace/poc_scripts/poc_<type>_<NNN>.py` per vulnerability
 - `workspace/poc_manifest.json`

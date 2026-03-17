@@ -3,7 +3,7 @@ name: code-security-review
 description: >
   AI-driven code security review with mandatory three-phase process: (1) Security Audit to produce raw findings,
   (2) False Positive Filtering with hard exclusions + AI-based confidence scoring, (3) Report with only high-confidence
-  findings. Integrates regex-based auto-exclusion, 19 hard exclusion rules, 17 precedents, and 1-10 confidence scoring.
+  findings. Integrates regex-based auto-exclusion, 28 hard exclusion rules, 22 precedents, and 1-10 confidence scoring.
   Supports all programming languages. Derived from anthropics/claude-code-security-review.
 origin: vuln-analysis
 ---
@@ -113,11 +113,11 @@ Apply regex-based patterns from `resources/hard-exclusion-patterns.md`:
 - Non-C/C++ files → Memory safety findings excluded
 - `.html` files → SSRF findings excluded
 
-### Step 2b — AI Filtering Pass (19 Hard Exclusions)
+### Step 2b — AI Filtering Pass (28 Hard Exclusions)
 
 Automatically exclude findings matching:
 
-1. Denial of Service (DOS)
+1. Denial of Service (DOS) — generic/volumetric only; single-request algorithmic DOS (ReDoS, XML bomb) is KEPT
 2. Secrets/credentials stored on disk
 3. Rate limiting concerns
 4. Memory consumption or CPU exhaustion
@@ -131,17 +131,26 @@ Automatically exclude findings matching:
 12. Log spoofing
 13. SSRF controlling only the path
 14. AI prompt injection
-15. Regex injection
+15. Regex injection (not ReDoS)
 16. Documentation files
 17. Missing audit logs
 18. Unavailable internal dependencies
 19. Non-vulnerability crashes
+20. Unrealistic attack prerequisites (requires full host/root access already)
+21. Executable model file formats (`.py`, `.llama`, etc. loaded as model weights)
+22. Invalid TLS certificates (operational concern, not code-level vulnerability)
+23. Payment/pricing plan bypasses without broader security impact
+24. Features requiring payment to exploit (paid account = contractual relationship)
+25. Missing HTTP security headers (`X-Frame-Options`, `HttpOnly`, `Secure`, `HSTS`)
+26. Image metadata not stripped (EXIF/metadata remaining in uploads)
+27. CSV injection (requires victim to open file and approve macro execution)
+28. Self-XSS or non-auto-triggering XSS
 
 ### Step 2c — Intended Functionality Check
 
 Assess whether the exploitable behavior **exceeds the designed purpose** of the API. If the API is designed to perform the "dangerous" operation (e.g., `download_from_url()` fetching arbitrary URLs), the finding is by design — not a vulnerability. Apply rules from `resources/filtering-rules.md §Intended Functionality Exclusion`.
 
-### Step 2d — Precedent Check (17 Precedents)
+### Step 2d — Precedent Check (22 Precedents)
 
 Apply specific guidance:
 
@@ -162,6 +171,11 @@ Apply specific guidance:
 15. **SSRF in client-side JS/TS**: Not valid (can't bypass firewalls from client).
 16. **Path traversal in HTTP requests**: `../` in HTTP requests is not a problem.
 17. **Log query injection**: Only report if definitely exposing sensitive data to external users.
+18. **Blind or limited SSRF**: Only report if attacker can read the response or reach sensitive internal services (cloud metadata, internal APIs). Blind SSRF with no actionable impact is informational.
+19. **Command injection in local-only libraries**: Informational unless the library is commonly embedded in web apps/API servers where injection input can arrive from remote users.
+20. **HTML or Markdown injection**: Informational unless XSS fires automatically on normal page navigation. Bold text or inserted links are not vulnerabilities.
+21. **Session token expiry**: Informational — not exploitable without a concrete attack path (e.g., shared device theft + no server-side revocation).
+22. **Local Pickle loading without networking**: Informational — local file placement implies local access. Exception: libraries with built-in HTTP/RPC servers that accept remote Pickle data.
 
 ### Step 2e — Confidence Scoring
 

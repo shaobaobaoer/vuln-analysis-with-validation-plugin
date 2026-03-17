@@ -36,7 +36,7 @@ Execute PoC scripts against the Docker-containerized target and verify reproduct
    - Re-initialize monitoring (restart listeners, clean markers)
    - Diagnose: ENTRY_POINT_NOT_FOUND / ENV_ISSUE / POC_BUG / PARAM_MISMATCH / TIMING / NOT_VULNERABLE
    - Apply fix and re-execute
-8. Save results to `workspace/results.json` (outcomes: `[SUCCESS]`, `[FAILED]`, `[INVALID]`)
+8. Save results to `workspace/results.json` with statuses: `CONFIRMED`, `NOT_REPRODUCED`, `ERROR`, `MAX_RETRIES`
 9. Cleanup containers after completion
 
 ## Output
