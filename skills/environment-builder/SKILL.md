@@ -213,7 +213,9 @@ QUIET=true bash scripts/health_check.sh \
 
 ## Step 5: Write Documentation (MANDATORY — never skip)
 
-After build completes, **MUST** write full environment documentation to `${PROJECT_DIR}/ENVIRONMENT_SETUP.md` using the template from `output/status-output.md`.
+After build completes, **MUST** write full environment documentation to `workspace/ENVIRONMENT_SETUP.md` using the template from `output/status-output.md`.
+
+> **vuln-analysis pipeline**: always write to `workspace/ENVIRONMENT_SETUP.md`, not to the cloned project source directory. Other pipeline artifacts (Dockerfile, docker-compose.yml, results.json) all live in `workspace/` — ENVIRONMENT_SETUP.md belongs there too.
 
 This step cannot be skipped. After the user closes the terminal, this file is the only reference.
 
@@ -302,11 +304,33 @@ Build with: `docker build --build-arg PIPELINE_ID="${PIPELINE_ID}" --label "vuln
 
 ### Dockerfile Best Practices
 
-- Always include HEALTHCHECK
+- **Always include HEALTHCHECK** — the Docker readiness gate (Step 3) cannot verify the app is running without it. Use `CMD curl -f http://localhost:<port>/health || exit 1`. If the app has no `/health` endpoint, probe a known-good path (e.g., `/`, `/api/v1/status`) or the CLI exit code.
 - Use `--no-install-recommends` to keep images small
 - Pin dependency versions where possible
 - For multi-service projects (app + DB), always use docker-compose
 - **Always label** all resources with `vuln-analysis.pipeline-id=${PIPELINE_ID}` — apply via `docker build --label` and `docker run --label` (the orchestrator provides `PIPELINE_ID`)
+
+### Dockerfile Path Rules (Reproducibility)
+
+Generated Dockerfiles MUST use relative or container-internal paths only. Hardcoded host-absolute paths break reproducibility when the workspace is moved or shared.
+
+| Pattern | Status | Fix |
+|---------|--------|-----|
+| `COPY . .` | OK | Relative — always correct |
+| `WORKDIR /app` | OK | Container-internal path |
+| `COPY /Users/alice/project/file .` | **FORBIDDEN** | Use `COPY file .` |
+| `COPY /home/user/workspace/poc.py .` | **FORBIDDEN** | Use build context or `ARG` |
+| `RUN pip install /abs/path/to/package` | **FORBIDDEN** | Copy first, then install |
+
+Use `ARG` for values that legitimately vary between builds (e.g., pipeline ID, port numbers):
+
+```dockerfile
+ARG PIPELINE_ID="unknown"
+ARG APP_PORT=8080
+LABEL vuln-analysis.pipeline-id="${PIPELINE_ID}"
+EXPOSE ${APP_PORT}
+HEALTHCHECK CMD curl -f http://localhost:${APP_PORT}/health || exit 1
+```
 
 ---
 
@@ -322,7 +346,7 @@ Build with: `docker build --build-arg PIPELINE_ID="${PIPELINE_ID}" --label "vuln
 
 - `workspace/Dockerfile` (if generated)
 - `workspace/docker-compose.yml` (if multi-service)
-- `${PROJECT_DIR}/ENVIRONMENT_SETUP.md` (mandatory documentation)
+- `workspace/ENVIRONMENT_SETUP.md` (mandatory documentation — always in workspace/)
 - Build success confirmation with health check results
 
 ---

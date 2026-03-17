@@ -201,7 +201,20 @@ poc_rce_002_v2.py                # WRONG: "_v2" suffix (use poc_rce_003.py for n
 
 The `<type>` MUST be an exact match to one of: `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`.
 
+## poc_scripts/ Directory Rules
+
+The `workspace/poc_scripts/` directory MUST contain **only** `poc_<type>_<NNN>.py` files.
+
+**FORBIDDEN in poc_scripts/**:
+- `auth_helper.py`, `utils.py`, `common.py` — helper modules belong in `workspace/` root
+- `test_server.py`, `mock_*.py` — test harnesses belong in `workspace/` root
+- `poc_dos_002_v2.py`, `poc_rce_003_retry.py` — version-suffix retry artifacts
+
+**Retry artifacts**: When a PoC fails and requires rewriting, the new version replaces the old file at the same path (`poc_rce_001.py` → overwrite in place). Do NOT create `poc_rce_001_v2.py`. If multiple fundamentally different attack vectors must be tested, use a new sequential number (`poc_rce_002.py`).
+
+**Helper code**: If a PoC needs shared setup (e.g., an auth token getter), write the logic inline in each PoC script or place the helper in `workspace/` root. Never import across PoC scripts — each must be independently runnable.
+
 ## Output
 
-- `workspace/poc_scripts/poc_<type>_<NNN>.py` — One script per vulnerability
+- `workspace/poc_scripts/poc_<type>_<NNN>.py` — One script per vulnerability (no other files)
 - `workspace/poc_manifest.json` — Manifest linking scripts to vulnerabilities

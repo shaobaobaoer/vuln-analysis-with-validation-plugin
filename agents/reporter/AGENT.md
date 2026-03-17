@@ -21,10 +21,13 @@ You are a security documentation specialist. You produce clear, actionable vulne
 
 ### Phase 1: Data Collection
 Read all workspace artifacts:
-- `workspace/target.json`
-- `workspace/vulnerabilities.json`
-- `workspace/results.json`
-- `workspace/poc_manifest.json`
+- `workspace/target.json` — project metadata, repo URL, entry points
+- `workspace/vulnerabilities.json` — full list of identified vulnerabilities with severity and entry point
+- `workspace/results.json` — reproduction status per vulnerability (CONFIRMED / NOT_REPRODUCED / ERROR)
+- `workspace/poc_manifest.json` — index of PoC scripts (optional — report must NOT depend on it for reproduction steps)
+- `workspace/poc_scripts/poc_*.py` — **Read each PoC script source code directly** to extract the exact payload, target endpoint, and execution command used. This is the authoritative source for the "Payload used" and "Execute PoC" reproduction blocks. The manifest is a secondary index only.
+
+> **Self-contained reproduction rule**: The report MUST be fully reproducible without needing to read the manifest. Every CONFIRMED vulnerability's reproduction block is derived from the PoC script source code, not from `poc_manifest.json`. A reader should be able to follow REPORT.md alone to reproduce every finding.
 
 ### Phase 2: Report Generation
 Create the report directory first: `mkdir -p workspace/report`
@@ -60,6 +63,8 @@ If either file is missing, the reporter MUST re-attempt generation or report fai
 
 - Every CONFIRMED vulnerability has the **full 5-part Reproduction block**: pre-conditions, PoC execution command, expected output, verification command, payload
 - All reproduction commands are **copy-paste-ready** (absolute paths, correct container names, correct ports)
+- **Reproduction blocks are derived from the PoC script source code** — not from `poc_manifest.json`. Read each `poc_scripts/poc_*.py` and include the actual payload from the script, not a generic placeholder.
+- **The report is self-contained** — a reader can reproduce every finding by following REPORT.md alone, without consulting poc_manifest.json, the source repo, or any external document.
 - The "Reproduction Environment" section contains the exact Dockerfile and docker build/run commands
 - Every vulnerability has a remediation recommendation
 - Executive summary accurately reflects the confirmed findings
@@ -67,6 +72,7 @@ If either file is missing, the reporter MUST re-attempt generation or report fai
 - PoC scripts appendix includes execution instructions via `docker exec` (NEVER host-side `python3`)
 - **Every vulnerability clearly states its entry point** (type: `library_api` / `webapp_endpoint` / `cli_command`, path, access level)
 - **Every vulnerability explains the call chain** from the public entry point to the vulnerable code (how an attacker reaches it)
+- **Step 9 is not complete until `workspace/report/REPORT.md` and `workspace/report/summary.json` physically exist** — verify with the shell command in Phase 5 before declaring success
 
 ## Severity Rating Algorithm
 
