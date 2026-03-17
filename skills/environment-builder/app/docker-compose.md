@@ -60,11 +60,13 @@ WEB_PORT=$(find_free_port 8000)
 EXPOSE_PORT=$(grep -i "^EXPOSE" Dockerfile | head -1 | grep -oE "[0-9]+" | head -1)
 EXPOSE_PORT=${EXPOSE_PORT:-8000}
 
-docker build -t "setup_${PROJECT_NAME}" .
+docker build -t "setup_${PROJECT_NAME}" \
+    --label "vuln-analysis.pipeline-id=${PIPELINE_ID}" .
 
 docker run -d \
     --name "setup_${PROJECT_NAME}_web" \
     --network "$SETUP_NETWORK" \
+    --label "vuln-analysis.pipeline-id=${PIPELINE_ID}" \
     -p ${WEB_PORT}:${EXPOSE_PORT} \
     "setup_${PROJECT_NAME}"
 

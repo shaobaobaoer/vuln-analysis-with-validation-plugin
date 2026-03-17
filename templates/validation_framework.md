@@ -9,6 +9,8 @@ This framework defines **observable, automatable, cheat-proof** success criteria
 3. **Automation-friendly** — All checks use `/tmp/poc_result.txt`, TCP listeners, `inotifywait`, and regex scanning for fully automated batch validation.
 4. **Three possible outcomes**: `[SUCCESS]`, `[FAILED]`, `[INVALID]`
 
+> **Note**: PoC scripts print their own stdout markers (`[CONFIRMED]`, `[NOT_REPRODUCED]`, `[PARTIAL]`, `[ERROR]` — see `skills/poc-writer/SKILL.md`). These are **input** to this validation framework. The framework then evaluates legitimacy and produces one of the three outcomes above.
+
 ## Shared Infrastructure
 
 ### Trigger Binary (`/tmp/invoke`)

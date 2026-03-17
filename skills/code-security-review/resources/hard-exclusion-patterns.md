@@ -160,7 +160,7 @@ _GENERIC_DOS_PATTERNS: List[Pattern] = [
 # Check a finding:
 def should_exclude(title: str, description: str) -> bool:
     combined = f"{title} {description}".lower()
-    for pattern in _DOS_PATTERNS:
+    for pattern in _GENERIC_DOS_PATTERNS:
         if pattern.search(combined):
             return True
     return False
