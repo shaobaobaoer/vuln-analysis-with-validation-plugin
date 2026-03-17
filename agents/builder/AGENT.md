@@ -99,6 +99,8 @@ Only load the sub-modules needed for this project.
 
 **Python Dependency Management**: Use `uv` exclusively — `uv pip install --system -r requirements.txt` or `uv sync`. NEVER use `pip install`, `conda`, or `python -m venv` in Dockerfiles. Install uv: `curl -LsSf https://astral.sh/uv/install.sh | sh`.
 
+**HEALTHCHECK (MANDATORY)**: Every generated Dockerfile MUST include a `HEALTHCHECK` instruction. Every `docker-compose.yml` MUST include `healthcheck:` for each service. Audit of 41 runs found 29% of Dockerfiles and 44% of compose files missing healthchecks.
+
 **Docker Resource Labeling**: Apply `vuln-analysis.pipeline-id=${PIPELINE_ID}` to all `docker build`, `docker run`, and compose services/networks. See §Docker Resource Labeling above for examples.
 
 ### Step 4: Verify

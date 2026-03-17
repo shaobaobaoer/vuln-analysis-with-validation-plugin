@@ -138,6 +138,7 @@ The pipeline ONLY supports these 6 vulnerability types. Any finding outside this
 ### Step 9: Report
 - **Delegate to**: `reporter` agent
 - Output: `workspace/report/REPORT.md`, `workspace/report/summary.json`
+- **Output verification (MANDATORY)**: After the reporter agent returns, the orchestrator MUST verify that `workspace/report/REPORT.md` and `workspace/report/summary.json` actually exist on disk. Do NOT mark Step 9 as `completed` unless both files exist. If missing, retry the reporter or mark as `failed`.
 
 ### Post-Pipeline: Docker Resource Cleanup
 - **Performed by**: orchestrator (self)

@@ -120,31 +120,22 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
 ```json
 {
   "target": "<project_name>",
-  "total_raw_findings": 15,
-  "total_after_filtering": 5,
   "filter_summary": {
-    "hard_exclusion": 4,
-    "ai_exclusion": 3,
-    "precedent_exclusion": 2,
-    "low_confidence": 1,
-    "not_reachable": 0,
-    "unsupported_type": 0,
-    "kept": 5
+    "phase1_candidates": 15,
+    "phase2_filtered": 10,
+    "final_count": 5,
+    "excluded_types": ["sql_injection", "xxe"],
+    "excluded_low_confidence": 3,
+    "excluded_not_reachable": 2
   },
   "vulnerabilities": [
     {
       "id": "VULN-001",
       "type": "rce",
-      "cve": "CVE-YYYY-NNNNN",
-      "severity": "CRITICAL",
+      "title": "RCE via eval() in request handler",
+      "severity": "critical",
       "confidence": 9,
-      "affected_component": "app/views.py:42",
-      "affected_parameter": "user_input",
       "description": "...",
-      "attack_path": "...",
-      "trigger_condition": "...",
-      "payload_example": "...",
-      "references": ["https://..."],
       "entry_point": {
         "type": "webapp_endpoint|library_api|cli_command",
         "path": "POST /api/exec|module.func()|tool --input",
@@ -157,42 +148,47 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
   "excluded_findings": [
     {
       "title": "Missing rate limiting on /api/login",
-      "reason": "Hard exclusion: rate limiting",
-      "original_type": "rate_limiting",
-      "confidence": 3
+      "reason": "Hard exclusion: rate limiting"
     }
   ]
 }
 ```
 
+**Required top-level keys** (MUST be present):
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `target` | string | Project name |
+| `filter_summary` | object | Filtering breakdown with `phase1_candidates`, `phase2_filtered`, `final_count` |
+| `vulnerabilities` | array | Kept findings (confidence >= 7, reachable, supported type) |
+| `excluded_findings` | array | All excluded findings with reasons (may be empty `[]`) |
+
+**Required per-vulnerability keys** (MUST be present in every entry):
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `id` | string | Unique identifier (VULN-001, VULN-002, ...) |
+| `type` | string | One of the 6 supported types (exact lowercase key) |
+| `title` | string | Short descriptive title |
+| `severity` | string | `critical`, `high`, or `medium` |
+| `confidence` | integer | 7-10 (findings < 7 are excluded) |
+| `description` | string | Detailed description |
+| `entry_point` | object | Must include `type`, `path`, `reachability` |
+
 ### ANTI-PATTERNS for vulnerabilities.json (FORBIDDEN)
 
 ```json
 // FORBIDDEN — flat array with no wrapper
-[
-  {"id": "VULN-001", "type": "rce", ...},
-  {"id": "VULN-002", "type": "ssrf", ...}
-]
+[{"id": "VULN-001", "type": "rce"}]
 
-// FORBIDDEN — missing filter_summary
+// FORBIDDEN — missing filter_summary or excluded_findings
 {"vulnerabilities": [...]}
 
-// FORBIDDEN — missing excluded_findings
-{"vulnerabilities": [...], "filter_summary": {...}}
-
-// FORBIDDEN — unsupported type names
-{"type": "arbitrary_plugin_loading"}
-{"type": "credential_exposure_via_environment"}
-{"type": "insecure_temp_file"}
-
-// FORBIDDEN — missing entry_point in a finding
-{"id": "VULN-001", "type": "rce", "severity": "HIGH"}
-
-// FORBIDDEN — missing confidence score
-{"id": "VULN-001", "type": "rce", "entry_point": {...}}
+// FORBIDDEN — missing entry_point or confidence in a finding
+{"id": "VULN-001", "type": "rce", "severity": "high"}
 ```
 
 ## Output
 
 - `workspace/target.json` (MUST include `entry_points[]` array with all public entry points — each entry point is an object with `type`, `path`, and metadata)
-- `workspace/vulnerabilities.json` (MUST be wrapper object with `target`, `total_raw_findings`, `total_after_filtering`, `filter_summary`, `vulnerabilities[]`, `excluded_findings[]` — NEVER a flat array)
+- `workspace/vulnerabilities.json` (MUST be wrapper object with `target`, `filter_summary`, `vulnerabilities[]`, `excluded_findings[]` — NEVER a flat array)

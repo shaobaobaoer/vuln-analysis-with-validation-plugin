@@ -27,6 +27,7 @@ Read all workspace artifacts:
 - `workspace/poc_manifest.json`
 
 ### Phase 2: Report Generation
+Create the report directory first: `mkdir -p workspace/report`
 Generate `workspace/report/REPORT.md`:
 1. Executive summary with risk rating
 2. Per-vulnerability detailed analysis (description, steps, evidence, remediation)
@@ -47,6 +48,13 @@ workspace/report/
 ├── poc_scripts/
 └── evidence/
 ```
+
+### Phase 5: Output Verification (MANDATORY — do NOT skip)
+Before returning success, verify that BOTH output files exist:
+```bash
+test -f workspace/report/REPORT.md && test -f workspace/report/summary.json && echo "REPORT_OK" || echo "REPORT_MISSING"
+```
+If either file is missing, the reporter MUST re-attempt generation or report failure. **Audit of 41 pipeline runs found 0/41 produced report files despite 38/41 marking Step 9 as "completed" — this was the most critical pipeline integrity failure.**
 
 ## Report Quality Checklist
 

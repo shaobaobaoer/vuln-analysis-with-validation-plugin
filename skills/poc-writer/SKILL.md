@@ -193,6 +193,8 @@ poc_001_auth_bypass.py           # WRONG: number before type, auth_bypass unsupp
 poc_path_traversal_001.py        # WRONG: path_traversal is not a type (use arbitrary_file_rw)
 poc_sql_injection_001.py         # WRONG: sql_injection is not a supported type
 poc_RCE_001.py                   # WRONG: uppercase type
+poc_dos_002_v2.py                # WRONG: "_v2" suffix (create a new NNN instead of versioning)
+poc_rce_002_v2.py                # WRONG: "_v2" suffix (use poc_rce_003.py for next attempt)
 ```
 
 **The ONLY valid pattern is**: `poc_<type>_<NNN>.py` where `<type>` is exactly one of `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection` and `<NNN>` is a 3-digit zero-padded number.
