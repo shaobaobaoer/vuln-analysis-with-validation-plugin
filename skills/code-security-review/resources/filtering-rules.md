@@ -35,6 +35,15 @@ Automatically exclude findings matching these patterns:
 17. **Missing audit logs.** A lack of audit logs is not a vulnerability.
 18. **Unavailable internal dependencies.** Depending on internal libraries that are not publicly available is not a vulnerability.
 19. **Non-vulnerability crashes.** Code that crashes (e.g., undefined or null variable) but is not actually a vulnerability.
+20. **Unrealistic attack prerequisites.** Vulnerabilities that require the attacker to already have full host access, root access, or equivalent administrative control. If the attacker already has the prerequisite capability, there is no marginal security impact.
+21. **Executable model file formats.** Security issues arising from loading raw Python files, `.llama` files, or other model file formats that are inherently executable by design. Loading these file types is an explicit user action with known risk.
+22. **Invalid TLS certificates.** Missing, expired, or self-signed TLS certificates in isolation. Certificate management is an operational concern, not a code-level security vulnerability.
+23. **Payment or pricing plan bypasses.** Bypassing subscription tiers, quotas, or pricing gates when there is no broader security impact (e.g., no data leakage, no privilege escalation, no account compromise).
+24. **Features requiring payment to exploit.** Vulnerabilities that can only be reached after paying for a specific product feature. The attacker must have a valid paid account and therefore a contractual relationship with the vendor.
+25. **Missing HTTP security headers.** Absence of clickjacking protection headers (`X-Frame-Options`, `Content-Security-Policy: frame-ancestors`), missing `HttpOnly` cookie flags, missing `Secure` cookie flags, missing `HSTS` headers. These are defense-in-depth hardening measures, not exploitable vulnerabilities on their own.
+26. **Image metadata not stripped.** EXIF or other metadata remaining in uploaded images. This is a privacy concern but not a security vulnerability unless the metadata directly enables exploitation (e.g., embedded scripts in metadata that execute).
+27. **CSV injection.** Injecting formula payloads (e.g., `=cmd|...`) into CSV exports. This is only exploitable if a victim opens the file in a spreadsheet application and approves execution of macros — an unrealistic two-step user action entirely outside the server's control.
+28. **Self-XSS or non-auto-triggering XSS.** XSS payloads that only execute when the victim pastes attacker-controlled content into their own browser console, or stored XSS that requires the victim to explicitly invoke a separate user action (beyond normal browsing) to trigger.
 
 ---
 
@@ -140,6 +149,11 @@ Specific guidance for common security patterns:
 15. **SSRF in client-side JS/TS**: Not valid since client-side code cannot make server-side requests that bypass firewalls. Only report SSRF in server-side code.
 16. **Path traversal in HTTP requests**: Using `../` is generally not a problem when triggering HTTP requests. Only relevant when reading files where `../` may allow accessing unintended files.
 17. **Log query injection**: Generally not an issue. Only report if the injection will definitely lead to exposing sensitive data to external users.
+18. **Blind or limited SSRF**: SSRF where the attacker cannot read the response and cannot reach sensitive internal services (e.g., metadata endpoints, internal APIs) is informational. Only report SSRF if it provides actionable impact: access to cloud metadata, internal network scanning, or data exfiltration via out-of-band channels. Blind SSRF that only proves a connection was made has low security value.
+19. **Command injection in local-only libraries**: Command injection in a library that is installed locally and not used as part of a network-accessible service is informational. **Exception**: If the library is commonly embedded in web applications or API servers where the injection input can arrive from remote users, report it — but explicitly document the remote exploitation path.
+20. **HTML or Markdown injection in text fields**: Injecting HTML tags or Markdown formatting into text fields is informational unless it leads to XSS that executes automatically when another user views the content. Markdown that renders as bold text or inserts a link is not a vulnerability. **Exception**: XSS that fires immediately on page load or on normal navigation is a real finding.
+21. **Session token expiry**: Missing session expiration or lack of token invalidation on logout is informational. These are best-practice recommendations, not exploitable vulnerabilities, unless there is a concrete attack path (e.g., shared device theft combined with a lack of server-side revocation).
+22. **Local Pickle loading without networking**: A library that loads Pickle files from the local filesystem is informational — the user must already have the ability to place the Pickle file, which implies local access. **Exception**: Libraries with built-in networking components (HTTP servers, RPC endpoints, API servers) that accept Pickle-serialized data from remote users are valid `insecure_deserialization` findings — document the remote upload path explicitly.
 
 ---
 
