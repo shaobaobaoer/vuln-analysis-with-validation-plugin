@@ -214,7 +214,76 @@ The `workspace/poc_scripts/` directory MUST contain **only** `poc_<type>_<NNN>.p
 
 **Helper code**: If a PoC needs shared setup (e.g., an auth token getter), write the logic inline in each PoC script or place the helper in `workspace/` root. Never import across PoC scripts — each must be independently runnable.
 
+## results.json Schema (MANDATORY — ONE canonical format)
+
+> **Critical**: Across 40+ pipeline runs, `validation_result` used 7+ different field names (`confirmed`, `outcome`, `poc_output`, `marker`, `result`, `status`, `proof`). This breaks ALL downstream parsing. The field MUST be `marker` with a string value — no exceptions.
+
+When the exploiter writes each PoC result into `workspace/results.json`, it MUST follow this exact schema:
+
+```json
+{
+  "pipeline_id": "vuln-XXXXXXXX",
+  "execution_timestamp": "2026-01-01T00:00:00Z",
+  "results": [
+    {
+      "vuln_id": "VULN-001",
+      "poc_script": "poc_rce_001.py",
+      "vuln_type": "rce",
+      "status": "SUCCESS",
+      "exit_code": 0,
+      "retries": 0,
+      "validation_result": {
+        "marker": "CONFIRMED",
+        "evidence": "TCP listener on 59875 received test_message after injecting payload via /api/exec",
+        "details": {}
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "confirmed": 1,
+    "not_reproduced": 0,
+    "partial": 0,
+    "error": 0
+  }
+}
+```
+
+### Canonical field rules
+
+| Field | Type | Allowed values | WRONG — never use |
+|-------|------|---------------|-------------------|
+| `validation_result.marker` | string | `"CONFIRMED"`, `"NOT_REPRODUCED"`, `"PARTIAL"`, `"ERROR"` | `confirmed`, `outcome`, `poc_output`, `result` |
+| `validation_result.evidence` | string | Any description string | (required) |
+| `status` (top-level per result) | string | `"SUCCESS"`, `"FAILED"`, `"ERROR"` | `[SUCCESS]`, `[FAILED]` |
+| `summary.confirmed` | integer | Count of CONFIRMED | (required) |
+
+**Note**: PoC script STDOUT uses bracket markers: `[CONFIRMED]`, `[NOT_REPRODUCED]`. The JSON field does NOT include brackets — `"marker": "CONFIRMED"` not `"marker": "[CONFIRMED]"`.
+
+### ANTI-PATTERNS (forbidden field names observed in production)
+
+```jsonc
+// WRONG — uses boolean 'confirmed' instead of string 'marker'
+"validation_result": { "confirmed": true, "evidence": [...] }
+
+// WRONG — uses 'outcome' instead of 'marker'
+"validation_result": { "outcome": "CONFIRMED", "evidence": "..." }
+
+// WRONG — uses 'poc_output' as the confirmation field
+"validation_result": { "poc_output": "CONFIRMED", "marker_file_created": true }
+
+// WRONG — uses 'result' instead of 'marker'
+"validation_result": { "result": "CONFIRMED", "details": "..." }
+
+// WRONG — brackets in marker value
+"validation_result": { "marker": "[CONFIRMED]", "evidence": "..." }
+
+// CORRECT
+"validation_result": { "marker": "CONFIRMED", "evidence": "..." }
+```
+
 ## Output
 
 - `workspace/poc_scripts/poc_<type>_<NNN>.py` — One script per vulnerability (no other files)
 - `workspace/poc_manifest.json` — Manifest linking scripts to vulnerabilities
+- `workspace/results.json` — Canonical results following the schema above

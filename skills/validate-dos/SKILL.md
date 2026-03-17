@@ -80,15 +80,33 @@ else
 fi
 ```
 
-### Step 4: Check Service Recovery
+### Step 4: Check Service Degradation (MANDATORY)
+
+**This step is required** — a DoS is only valid if the service's own availability is affected, not just that resources were consumed or held.
 
 ```bash
-# Verify service is still running (or has crashed)
+# After the attack, check whether the main health/index endpoint is degraded
+health_start=$(date +%s%N)
 curl -sf --max-time 10 http://localhost:<port>/ > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-  echo "[SUCCESS] Service became unresponsive"
+health_exit=$?
+health_end=$(date +%s%N)
+health_time=$(( (health_end - health_start) / 1000000 ))
+
+if [ $health_exit -ne 0 ]; then
+  echo "[SUCCESS] Service became unresponsive (exit $health_exit)"
+elif [ "$health_time" -ge "$((baseline_avg * 5))" ]; then
+  echo "[SUCCESS] Health endpoint degraded: ${health_time}ms vs baseline ${baseline_avg}ms"
+else
+  echo "[PARTIAL] Attack consumed resources but service remained healthy: health=${health_time}ms"
 fi
 ```
+
+**Critical distinction**:
+- `[SUCCESS]` requires the service's own health/main endpoint to show degradation (5x+ slowdown or unresponsive)
+- `[PARTIAL]` if the attack consumed resources (connections held, memory used) BUT the health endpoint still responds quickly — resource holding without service impact is NOT a confirmed DoS
+- `[FAILED]` if neither the attack endpoint nor health endpoint show any degradation
+
+**ANTI-PATTERN (observed in production runs)**: Reporting CONFIRMED when "5 connections were held for 3s avg" but "health check responded in 0.002s" — the fast health check proves the service was NOT impaired. This MUST be `[PARTIAL]`, not `[SUCCESS]`.
 
 ## Legitimacy Check (Anti-Cheat)
 

@@ -183,7 +183,22 @@ For each finding that survived Phase 3c filtering, match it against the disclosu
 - If no match: set `known_disclosures: []` — NEVER omit this key
 - If the matched disclosure has `status: fixed` AND the scanned version >= `fixed_version`: note this in the finding description and reduce confidence by 1 (the vulnerability may already be patched in production)
 
-**Phase 3e — Prioritization**:
+**Phase 3e — Deduplication** (run BEFORE Phase 3f):
+
+If two or more findings share the same `entry_point.path` AND `entry_point.method` (or the same vulnerable function for library targets), consolidate them:
+- Keep only the **highest-severity** finding as primary
+- Merge the other findings' descriptions into the primary finding's `description` field
+- Add the merged-away findings to `excluded_findings[]` with reason `"Deduplicated: same root-cause entry point as VULN-XXX"`
+- Exception: keep separate findings only if they demonstrate **completely different attack chains** (e.g., SSRF and RCE via different mechanisms through one endpoint) — must be explicitly noted
+
+**Phase 3f — Volume Cap**:
+
+The final `vulnerabilities[]` array MUST contain **at most 5 findings**. If more than 5 findings survive all filters:
+- Keep the top 5 ranked by: severity (critical > high > medium) → confidence → exploitability
+- Move the remainder to `excluded_findings[]` with reason `"Volume cap: lower priority than top 5 findings"`
+- This cap prevents report inflation and ensures every reported finding is well-evidenced
+
+**Phase 3g — Prioritization**:
 Rank by: severity > reachability > exploitability > impact > confidence (threshold >= 7)
 
 ## Supported Vulnerability Types
@@ -253,10 +268,12 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
       "entry_point": {
         "type": "webapp_endpoint|library_api|cli_command",
         "path": "POST /api/exec|module.func()|tool --input",
-        "access_level": "public|authenticated|admin",
+        "access_level": "none|auth|admin|local",
         "reachability": "reachable|conditional",
+        "reachability_notes": "Brief explanation if conditional",
         "call_chain": "route /api/exec → handler() → eval(user_input)"
       },
+      "attacker_preconditions": "none|<description of what attacker must control>",
       "known_disclosures": [
         {
           "source": "nvd|huntr|github_advisory|osv|snyk",
@@ -301,7 +318,17 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
 | `confidence` | integer | 7-10 (findings < 7 are excluded) |
 | `description` | string | Detailed description |
 | `entry_point` | object | Must include `type`, `path`, `access_level`, `reachability`, `call_chain` |
+| `attacker_preconditions` | string | `"none"` if no preconditions; otherwise describe what the attacker must already control (e.g., `"write access to model directory"`, `"local code execution"`). MANDATORY for `insecure_deserialization` and `arbitrary_file_rw` types. |
 | `known_disclosures` | array | Prior CVE/huntr/advisory matches — `[]` if none found. NEVER omit this key. |
+
+**`entry_point.access_level` valid values** (MANDATORY — `?` is NOT acceptable):
+
+| Value | Meaning |
+|-------|---------|
+| `none` | No authentication or authorization required — network-accessible to all |
+| `auth` | Requires valid user credentials (login/session/token) |
+| `admin` | Requires administrator or elevated privileges |
+| `local` | Requires local filesystem access or code execution on the host |
 
 **`known_disclosures[]` entry fields**:
 
@@ -337,6 +364,15 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
 
 // FORBIDDEN — disclosures_searched = false or omitted (means CVE search was skipped)
 {"filter_summary": {"disclosures_searched": false, ...}}
+
+// FORBIDDEN — access_level = '?' (must be one of: none/auth/admin/local)
+{"entry_point": {"access_level": "?", "reachability": "reachable"}}
+
+// FORBIDDEN — missing attacker_preconditions on insecure_deserialization finding
+{"type": "insecure_deserialization", "entry_point": {...}}  // no attacker_preconditions key
+
+// FORBIDDEN — more than 5 findings in vulnerabilities[] array
+{"vulnerabilities": [{...}, {...}, {...}, {...}, {...}, {...}]}  // 6 entries: FORBIDDEN
 ```
 
 ## Output

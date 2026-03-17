@@ -97,6 +97,32 @@ def deserialize():
 
 **Self-check before writing any test harness file**: "Does each endpoint I'm adding call a function that exists in the original repository?" If NO — remove it.
 
+### Inline Dockerfile Server (heredoc pattern) — SAME RULES APPLY
+
+When building a test harness **inline inside a Dockerfile** using a `RUN cat > /app/server.py << 'PYEOF' ... PYEOF` heredoc, the **exact same integrity rules** apply. The inline code is still a builder-generated file and still violates Safety Invariant #9 if it introduces vulnerable endpoints.
+
+**Observed violation** (FORBIDDEN):
+```dockerfile
+RUN cat > /app/server.py << 'PYEOF'
+@app.route("/exec_code", methods=["POST"])
+def exec_code():
+    code = request.get_json().get("code", "")
+    exec(code, {})          # <-- FORBIDDEN: exec(user_input) invented by builder
+    return jsonify({"status": "executed"})
+PYEOF
+```
+
+This is identical to writing the same code in a standalone `vuln_test_server.py`. **Do not add `exec()`, `eval()`, `pickle.loads()`, or `subprocess.run(shell=True)` endpoints in any inline server, regardless of how they are written into the container.**
+
+### Library Targets: No HTTP Wrapper for Unexposed Functions
+
+For **library-type targets** (Python packages with no built-in HTTP server), the correct test harness exposes only what the library's public API already does. Do NOT create HTTP endpoints that:
+- Accept pickle/serialized data and call `pickle.load()` on it — unless the library itself does this in a public function
+- Accept arbitrary code strings and execute them — unless the library itself has this feature
+- Accept file paths and read files — unless the library itself has this feature
+
+If the library has no HTTP server, the test harness should be minimal: install the library and provide a way to invoke its public functions (e.g., a thin CLI wrapper or a Python test script). Avoid creating a Flask/FastAPI server for pure library targets unless the library itself is an HTTP framework.
+
 ---
 
 ## Your Role

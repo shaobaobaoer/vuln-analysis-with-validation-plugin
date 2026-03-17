@@ -166,6 +166,28 @@ Scan the PoC script source code for forbidden patterns. If any match, the result
 | `[FAILED]` | Success condition not met (vulnerability not triggered) |
 | `[INVALID]` | PoC uses forbidden patterns — cheating detected |
 
+After determining the result, write the PoC's entry in `results.json` using the **canonical schema** (see `skills/poc-writer/SKILL.md §results.json Schema`):
+
+```json
+{
+  "vuln_id": "VULN-001",
+  "poc_script": "poc_rce_001.py",
+  "vuln_type": "rce",
+  "status": "SUCCESS",
+  "exit_code": 0,
+  "retries": 0,
+  "validation_result": {
+    "marker": "CONFIRMED",
+    "evidence": "<one sentence describing the proof>"
+  }
+}
+```
+
+**Mandatory rules**:
+- `validation_result.marker` MUST be present and MUST be one of: `"CONFIRMED"`, `"NOT_REPRODUCED"`, `"PARTIAL"`, `"ERROR"` (string, no brackets)
+- Do NOT use `confirmed`, `outcome`, `poc_output`, `result`, or any other field name for the confirmation status
+- `summary.confirmed` MUST be an integer count of entries where `marker == "CONFIRMED"`
+
 ---
 
 ## Per-Type Detail
