@@ -259,8 +259,7 @@ When the exploiter writes each PoC result into `workspace/results.json`, it MUST
       "retries": 0,
       "validation_result": {
         "marker": "CONFIRMED",
-        "evidence": "TCP listener on 59875 received test_message after injecting payload via /api/exec",
-        "details": {}
+        "evidence": "TCP listener on 59875 received test_message after injecting payload via /api/exec"
       }
     }
   ],
