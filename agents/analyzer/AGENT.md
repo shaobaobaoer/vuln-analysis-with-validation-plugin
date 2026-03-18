@@ -268,14 +268,14 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
       "confidence": 9,
       "description": "...",
       "entry_point": {
-        "type": "webapp_endpoint|library_api|cli_command",
-        "path": "POST /api/exec|module.func()|tool --input",
-        "access_level": "none|auth|admin|local",
-        "reachability": "reachable|conditional",
-        "reachability_notes": "Brief explanation if conditional",
+        "type": "webapp_endpoint",
+        "path": "POST /api/exec",
+        "access_level": "none",
+        "reachability": "reachable",
+        "reachability_notes": "",
         "call_chain": "route /api/exec → handler() → eval(user_input)"
       },
-      "attacker_preconditions": "none|<description of what attacker must control>",
+      "attacker_preconditions": "none",
       "known_disclosures": [
         {
           "source": "nvd|huntr|github_advisory|osv|snyk",
@@ -372,16 +372,48 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
 // FORBIDDEN — access_level = '?' (must be one of: none/auth/admin/local)
 {"entry_point": {"access_level": "?", "reachability": "reachable"}}
 
+// FORBIDDEN — using 'auth_required' or 'requires_auth' (boolean) instead of 'access_level' (string enum)
+// OBSERVED IN 75/340 FINDINGS — the most common entry_point error
+{"entry_point": {"path": "/api/exec", "auth_required": false, "reachability": "reachable"}}
+{"entry_point": {"path": "/api/exec", "requires_auth": false, "reachability": "reachable"}}
+// CORRECT — always use access_level with a string value:
+{"entry_point": {"path": "/api/exec", "access_level": "none", "reachability": "reachable", ...}}
+
 // FORBIDDEN — missing attacker_preconditions on insecure_deserialization finding
 {"type": "insecure_deserialization", "entry_point": {...}}  // no attacker_preconditions key
 
 // FORBIDDEN — attacker_preconditions = null (null is NOT acceptable; must be "none" or a description)
+// OBSERVED IN 67/340 FINDINGS — second most common error
 {"type": "insecure_deserialization", "attacker_preconditions": null}
 {"type": "arbitrary_file_rw", "attacker_preconditions": null}
+// CORRECT — always use a string:
+{"type": "insecure_deserialization", "attacker_preconditions": "attacker must be able to upload a file to the server"}
+{"type": "insecure_deserialization", "attacker_preconditions": "none"}  // if network-exploitable with no precondition
 
 // FORBIDDEN — more than 5 findings in vulnerabilities[] array
 {"vulnerabilities": [{...}, {...}, {...}, {...}, {...}, {...}]}  // 6 entries: FORBIDDEN
 ```
+
+### entry_point Field Reference — Use EXACTLY These Keys
+
+> **WARNING**: Do NOT invent custom entry_point field names. 75 out of 340 pipeline findings used `auth_required` or `requires_auth` instead of `access_level`. Custom fields break all downstream parsing.
+
+```
+entry_point = {
+  "type":               string  — REQUIRED: "webapp_endpoint" | "library_api" | "cli_command"
+  "path":               string  — REQUIRED: "POST /api/exec" | "lib.func()" | "tool --flag"
+  "access_level":       string  — REQUIRED: "none" | "auth" | "admin" | "local"
+  "reachability":       string  — REQUIRED: "reachable" | "conditional"
+  "reachability_notes": string  — optional: explain if conditional
+  "call_chain":         string  — REQUIRED: "route → handler → vuln_func(user_input)"
+}
+```
+
+**Converting boolean auth flags to `access_level`**:
+- `auth_required: false` → `access_level: "none"` (public endpoint, no login needed)
+- `auth_required: true` → `access_level: "auth"` (requires logged-in user)
+- `requires_admin: true` → `access_level: "admin"` (requires admin role)
+- Requires local disk / filesystem access → `access_level: "local"`
 
 ## Output
 

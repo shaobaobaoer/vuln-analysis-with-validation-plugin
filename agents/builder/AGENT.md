@@ -95,7 +95,11 @@ def deserialize():
     pickle.loads(request.data)  # <-- FORBIDDEN
 ```
 
-**Self-check before writing any test harness file**: "Does each endpoint I'm adding call a function that exists in the original repository?" If NO — remove it.
+**Self-check before writing any test harness file**: "Does each endpoint I'm adding call a function that exists in the original repository AND use the same interface (not a more-dangerous one)?" If NO to either — remove it.
+
+**Interface escalation is FORBIDDEN** — even if the library has a `pickle.load(filepath)` function, wrapping it as `pickle.loads(request.data)` (raw bytes over HTTP) changes the attack surface. The original function reads a local file path (requiring local access); the wrapper makes it network-accessible. This is manufacturing a vulnerability. Observed in `gluon-nlp/harness.py` — INVALID.
+
+**"Simulates X" is not a defense**: Docstrings that say "Simulates gluonnlp.utils.shm.load()" do NOT make an endpoint valid. If the original function requires local filesystem access (`access_level: "local"`) and you wrap it to accept raw HTTP data (`access_level: "none"`), you have manufactured a fake vulnerability. Remove the endpoint.
 
 ### Inline Dockerfile Server (heredoc pattern) — SAME RULES APPLY
 
