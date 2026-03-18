@@ -474,25 +474,6 @@ class IDORValidator(BaseValidator):
 
 
 # ---------------------------------------------------------------------------
-# Auto-registration
-#
-# Each concrete validator declares its own VULN_TYPE class constant so we
-# can register without constructing a throw-away instance.
-# ---------------------------------------------------------------------------
-_ALL_VALIDATORS: list[tuple[str, type[BaseValidator]]] = [
-    ("rce", RCEValidator),
-    ("ssrf", SSRFValidator),
-    ("insecure_deserialization", InsecureDeserializationValidator),
-    ("arbitrary_file_rw", ArbitraryFileRWValidator),
-    ("dos", DoSValidator),
-    ("command_injection", CommandInjectionValidator),
-    ("sql_injection", SQLInjectionValidator),
-    ("xss", XSSValidator),
-    ("idor", IDORValidator),
-]
-
-
-# ---------------------------------------------------------------------------
 # 10. JNDI Injection (Java-specific)
 # ---------------------------------------------------------------------------
 class JNDIInjectionValidator(BaseValidator):
@@ -592,10 +573,76 @@ class PrototypePollutionValidator(BaseValidator):
 
 
 # ---------------------------------------------------------------------------
-# Auto-registration
-#
-# Each concrete validator declares its own VULN_TYPE class constant so we
-# can register without constructing a throw-away instance.
+# 12. Pickle Deserialization (Python-specific)
+# ---------------------------------------------------------------------------
+class PickleDeserializationValidator(BaseValidator):
+    """Confirms Python pickle deserialization RCE via marker file or callback.
+
+    PoC scripts send a malicious pickle payload (using __reduce__ to call
+    os.system('/tmp/invoke')) to a network-accessible endpoint. Confirmation
+    requires a marker file written by the payload OR a TCP callback.
+
+    Python-only: skip if target language is not Python.
+    """
+
+    PICKLE_PATTERNS = [
+        r"PICKLE_CONFIRMED",
+        r"pickle[_\s-]*deserialization[_\s-]*(?:confirmed|successful)",
+        r"pickle[_\s-]*rce[_\s-]*[a-f0-9]{8,}",   # /tmp/pickle_rce_<id> pattern
+        r"__reduce__.*(?:executed|triggered)",
+        r"malicious[_\s-]*pickle[_\s-]*(?:loaded|executed)",
+    ]
+
+    PARTIAL_PATTERNS = [
+        r"_reconstruct|__reduce__|copyreg\._reconstructor",  # pickle internals in traceback
+        r"AttributeError.*__reduce__",
+        r"pickle\.UnpicklingError",
+        r"PickleError|UnpicklingError",
+    ]
+
+    @property
+    def vuln_type(self) -> str:
+        return "pickle_deserialization"
+
+    def validate(self, response: dict[str, Any]) -> ValidationResult:
+        stdout = self._safe_get(response, "stdout")
+        stderr = self._safe_get(response, "stderr")
+        combined = f"{stdout}\n{stderr}"
+
+        # Full confirmation
+        for pat in self.PICKLE_PATTERNS:
+            match = re.search(pat, combined, re.IGNORECASE)
+            if match:
+                return ValidationResult(
+                    status=ValidationStatus.CONFIRMED,
+                    evidence=match.group(0),
+                    details={"pattern_matched": pat},
+                )
+
+        # Also accept generic RCE evidence (invoke binary executed)
+        rce_match = re.search(r"uid=\d+\(.+?\)\s+gid=\d+|VULN_MARKER_[A-Za-z0-9_-]+", combined)
+        if rce_match:
+            return ValidationResult(
+                status=ValidationStatus.CONFIRMED,
+                evidence=f"RCE confirmed via pickle payload: {rce_match.group(0)}",
+                details={"source": "command output"},
+            )
+
+        # Partial: pickle internals reached (deserialization attempted)
+        for pat in self.PARTIAL_PATTERNS:
+            match = re.search(pat, combined, re.IGNORECASE)
+            if match:
+                return ValidationResult(
+                    status=ValidationStatus.PARTIAL,
+                    evidence=f"Pickle deserialization attempted (internal traceback): {match.group(0)[:80]}",
+                    details={"pattern_matched": pat},
+                )
+
+        return ValidationResult(status=ValidationStatus.NOT_REPRODUCED)
+
+
+# ---------------------------------------------------------------------------
+# Auto-registration — all 12 supported vulnerability types
 # ---------------------------------------------------------------------------
 _ALL_VALIDATORS: list[tuple[str, type[BaseValidator]]] = [
     ("rce", RCEValidator),
@@ -607,8 +654,9 @@ _ALL_VALIDATORS: list[tuple[str, type[BaseValidator]]] = [
     ("sql_injection", SQLInjectionValidator),
     ("xss", XSSValidator),
     ("idor", IDORValidator),
-    ("jndi_injection", JNDIInjectionValidator),
-    ("prototype_pollution", PrototypePollutionValidator),
+    ("jndi_injection", JNDIInjectionValidator),           # Java-only
+    ("prototype_pollution", PrototypePollutionValidator), # JS/TS-only
+    ("pickle_deserialization", PickleDeserializationValidator),  # Python-only
 ]
 
 for _vuln_type, _cls in _ALL_VALIDATORS:

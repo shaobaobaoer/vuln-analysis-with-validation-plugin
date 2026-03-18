@@ -151,10 +151,10 @@ For these targets, the pipeline can only find `dos` (algorithmic) or `command_in
 
 ## Vulnerability Types Covered
 
-rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection, xss, idor, jndi_injection, prototype_pollution
+rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection, xss, idor, jndi_injection, prototype_pollution, pickle_deserialization
 
 **Type scope by target type**:
-- `webapp`: all 11 types (idor requires integer-keyed user-owned resources, not UUID-keyed; jndi_injection only for Java; prototype_pollution only for JS/TS)
+- `webapp`: all 12 types (idor: integer-keyed only; jndi_injection: Java only; prototype_pollution: JS/TS only; pickle_deserialization: Python only)
 - `service`: all except xss and idor (no HTML rendering, no user-owned resource model)
 - `cli`: rce, arbitrary_file_rw, dos, command_injection
 - `library`: dos, command_injection, insecure_deserialization (only if network-receiving), prototype_pollution (JS/TS libs only, if gadget chain exists)
@@ -162,6 +162,7 @@ rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, 
 **Language-specific types (HARD GATES)**:
 - `jndi_injection`: Java targets ONLY — never output for Python, Go, JS, Ruby, or any other language
 - `prototype_pollution`: JavaScript/TypeScript targets ONLY — never output for Python, Java, Go, or any other language
+- `pickle_deserialization`: Python targets ONLY — never output for Java, Go, JS, Ruby, or any other language; requires network-accessible `pickle.loads()` call (not local file loading)
 
 ## Entry Point Reachability (MANDATORY)
 

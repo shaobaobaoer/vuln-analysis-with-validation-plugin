@@ -87,11 +87,14 @@ After determining the base `valid_vuln_types` from the table, check `language` a
 |----------|--------------------------|-----------|
 | `java` | `jndi_injection` | Always add for Java `webapp` and `service` targets |
 | `javascript` or `typescript` | `prototype_pollution` | Add for `webapp` and `service`; also `library` if it exports deep-merge functions |
-| Python, Go, Ruby, PHP, Rust, other | — | Do NOT add language-specific types; base list only |
+| `python` | `pickle_deserialization` | Add for Python `webapp` and `service`; skip for pure `library`/`cli` without built-in HTTP server |
+| Go, Ruby, PHP, Rust, other | — | Do NOT add language-specific types; base list only |
 
 **Example**: Java webapp → `["rce", "ssrf", "insecure_deserialization", "arbitrary_file_rw", "dos", "command_injection", "sql_injection", "xss", "idor", "jndi_injection"]`
 
 **Example**: TypeScript webapp → `["rce", "ssrf", "insecure_deserialization", "arbitrary_file_rw", "dos", "command_injection", "sql_injection", "xss", "idor", "prototype_pollution"]`
+
+**Example**: Python webapp → `["rce", "ssrf", "insecure_deserialization", "arbitrary_file_rw", "dos", "command_injection", "sql_injection", "xss", "idor", "pickle_deserialization"]`
 
 ### Library Target Rules
 

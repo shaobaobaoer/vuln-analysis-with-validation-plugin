@@ -258,6 +258,26 @@ A finding is **NOT Prototype Pollution** unless untrusted input can set properti
 
 **Scope**: `prototype_pollution` findings are ONLY valid for JavaScript/TypeScript targets. All other languages → auto-exclude.
 
+33. **Pickle Deserialization Quality Gate** — Python targets only (apply to ALL `pickle_deserialization` candidates):
+
+A finding is **NOT Pickle Deserialization** unless there is a direct, traceable path from an **unauthenticated or low-privilege network request** to a `pickle.loads()`, `dill.loads()`, or `cloudpickle.loads()` call on attacker-supplied bytes.
+
+| Situation | Decision |
+|-----------|----------|
+| Target language is NOT Python | **EXCLUDE** — pickle_deserialization is Python-only |
+| `pickle.load(open(filepath))` where filepath is caller-supplied — no network | **EXCLUDE** — local access required; attacker must already control filesystem |
+| `torch.load(url)` or `joblib.load(path)` where caller supplies the path | **EXCLUDE** — model loading from local path; applies filtering-rules rule #22 |
+| `AutoModel.from_pretrained(url, trust_remote_code=True)` | **EXCLUDE** — explicit trust opt-in; attacker already controls remote code |
+| HTTP endpoint that `base64.b64decode(request.data)` then passes to `pickle.loads()` | **KEEP** — network-accessible pickle deserialization → CRITICAL |
+| Flask/FastAPI route that calls `pickle.loads(request.get_data())` | **KEEP** — direct network path to pickle execution |
+| Background task queue (Celery/RQ) that deserializes pickle from Redis/RabbitMQ and Redis/RabbitMQ accessible from network | **KEEP** — if attacker can inject into the queue |
+| `pickle.loads()` in a locally-invoked CLI tool (not network-accessible) | **EXCLUDE** — local access required; use `command_injection` type if CLI injection path exists |
+| `yaml.load()` without `Loader=yaml.SafeLoader` — NOT pickle | **DO NOT use `pickle_deserialization`** — map to `insecure_deserialization` instead |
+
+**Evidence required**: Identify the exact `pickle.loads()` (or `dill.loads()`/`cloudpickle.loads()`) call site, trace the input from an HTTP request parameter/body to that call, confirm no content-type check blocks binary payloads. CVSS 9.8 for unauthenticated; 8.8 for authenticated.
+
+**Scope**: `pickle_deserialization` is ONLY valid for Python targets AND ONLY when there is a network-accessible path to the deserialization call. `yaml.load()`, `marshal.loads()`, `shelve.open()` → use `insecure_deserialization` type, not `pickle_deserialization`.
+
 26. **Severity inflation**: A severity label must be calibrated against attack prerequisites. The following downgrade rules apply automatically:
     - Finding with `access_level: "local"` → maximum severity is **MEDIUM** (attacker already has local access)
     - `dos` with `access_level: "auth"` → maximum severity is **MEDIUM**

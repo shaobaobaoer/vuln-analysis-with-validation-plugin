@@ -57,6 +57,7 @@ All PoC scripts and Python execution happen **inside Docker containers**. Nothin
 | `idor` | Insecure Direct Object Reference / BOLA | `skills/validate-idor/` |
 | `jndi_injection` | JNDI Injection / Log4Shell (**Java only**) | `skills/validate-jndi-injection/` |
 | `prototype_pollution` | Prototype Chain Pollution (**JS/TS only**) | `skills/validate-prototype-pollution/` |
+| `pickle_deserialization` | Python Pickle RCE via `__reduce__` (**Python only**) | `skills/validate-pickle-deserialization/` |
 
 ### Code Security Review
 
@@ -119,7 +120,7 @@ vuln-analysis/
 │   │   ├── SKILL.md                       #     Mandatory audit → filter → report
 │   │   └── resources/                     #     Filtering rules, exclusion patterns
 │   ├── poc-writer/SKILL.md                #   Step 5: PoC script patterns
-│   └── validate-*/SKILL.md               #   11 type-specific validators (Steps 7-8; 2 are language-gated)
+│   └── validate-*/SKILL.md               #   12 type-specific validators (Steps 7-8; 3 are language-gated)
 │
 ├── agents/                                # Agent definitions
 │   ├── orchestrator/AGENT.md              #   Pipeline coordinator (opus)
