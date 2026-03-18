@@ -151,7 +151,12 @@ For these targets, the pipeline can only find `dos` (algorithmic) or `command_in
 
 ## Vulnerability Types Covered
 
-rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection
+rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection, xss
+
+**Type scope by target type**:
+- `webapp` / `service`: all 8 types
+- `cli`: rce, arbitrary_file_rw, dos, command_injection
+- `library`: dos, command_injection, insecure_deserialization (only if network-receiving)
 
 ## Entry Point Reachability (MANDATORY)
 
@@ -216,7 +221,7 @@ vuln-analysis/
 │   ├── vulnerability-scanner/   #   Step 4: vuln discovery with integrated filtering
 │   ├── code-security-review/    #   3-phase code audit (with resources/)
 │   ├── poc-writer/              #   Step 5: PoC script patterns
-│   └── validate-*/              #   6 type-specific validators (Steps 7-8)
+│   └── validate-*/              #   8 type-specific validators (Steps 7-8)
 ├── agents/                      # Agent definitions (5 agents)
 │   ├── orchestrator/AGENT.md    #   Pipeline coordinator (opus)
 │   ├── analyzer/AGENT.md        #   Target + vuln analysis (opus)

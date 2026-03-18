@@ -60,7 +60,7 @@ Before starting, you MUST read ALL of the following:
 Examine code for these security categories:
 
 **Input Validation Vulnerabilities:**
-- SQL injection, command injection, XXE, SSTI, NoSQL injection, path traversal
+- SQL injection (string concatenation in queries, ORM raw queries), command injection, XXE, SSTI, NoSQL injection, path traversal, XSS (reflected, stored)
 
 **Authentication & Authorization Issues:**
 - Auth bypass, privilege escalation, session flaws, JWT vulnerabilities

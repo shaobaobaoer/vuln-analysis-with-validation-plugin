@@ -133,7 +133,9 @@ Generate `workspace/report/summary.json` conforming to the following schema:
   },
   "by_type": {
     "rce": 1,
-    "ssrf": 1
+    "ssrf": 1,
+    "sql_injection": 0,
+    "xss": 0
   },
   "known_disclosures_summary": {
     "total_prior_disclosures": 3,
@@ -220,6 +222,7 @@ until curl -sf http://localhost:<host_port>/ > /dev/null 2>&1; do sleep 2; done
 - **Status**: CONFIRMED
 - **Affected Component**: <file:line or endpoint>
 - **CVE**: <CVE-ID if found in known_disclosures, else N/A>
+- **CVSS Score**: <cvss_score> (<cvss_vector>)
 - **Entry Point Type**: `library_api` / `webapp_endpoint` / `cli_command`
 - **Entry Point Path**: <e.g., `POST /api/exec`, `sample_lib.parse()`, `tool --input`>
 - **Access Level**: public / authenticated / admin
@@ -349,6 +352,8 @@ Use these standard remediation templates when generating the remediation section
 | `arbitrary_file_rw` | Restrict write paths, validate filenames, use tmpdir |
 | `dos` | Implement rate limiting, input size limits, timeouts |
 | `command_injection` | Use parameterized commands, avoid shell=True, validate input |
+| `sql_injection` | Use parameterized queries / prepared statements exclusively. Replace `cursor.execute(f"SELECT ... {val}")` with `cursor.execute("SELECT ... %s", (val,))`. Use ORM query builders (SQLAlchemy, Django ORM) instead of raw SQL string concatenation. |
+| `xss` | Escape all user-controlled output before rendering in HTML. Use framework auto-escaping (Jinja2 `autoescaping=True`, React's JSX). Never use `Markup()`, `mark_safe()`, or `dangerouslySetInnerHTML` on untrusted input. Implement Content-Security-Policy headers. |
 
 ### Using the Library
 

@@ -43,18 +43,22 @@ The following fallback strategies are **STRICTLY FORBIDDEN**. If Docker is unava
 
 ## Supported Vulnerability Types
 
-The pipeline ONLY supports these 6 vulnerability types. Any finding outside this list MUST be mapped to one of these or excluded:
+The pipeline supports these 8 vulnerability types. Any finding outside this list MUST be mapped to one of these or excluded:
 
-| Type Key | Description |
-|----------|-------------|
-| `rce` | Remote Code Execution |
-| `ssrf` | Server-Side Request Forgery |
-| `insecure_deserialization` | Insecure Deserialization |
-| `arbitrary_file_rw` | Arbitrary File Read/Write |
-| `dos` | Denial of Service |
-| `command_injection` | Command Injection |
+| Type Key | Description | Valid For |
+|----------|-------------|-----------|
+| `rce` | Remote Code Execution | webapp, service, cli, library |
+| `ssrf` | Server-Side Request Forgery | webapp only |
+| `insecure_deserialization` | Insecure Deserialization | webapp, service, library (if network-receiving) |
+| `arbitrary_file_rw` | Arbitrary File Read/Write | webapp, service, cli |
+| `dos` | Denial of Service | all types |
+| `command_injection` | Command Injection | all types |
+| `sql_injection` | SQL Injection | webapp, service |
+| `xss` | Cross-Site Scripting | webapp only |
 
-**Mapping rules**: "Path Traversal" → `arbitrary_file_rw`. "Code Injection" / "Template Injection" → `rce`. "Information Disclosure" is NOT a supported type — exclude it unless it maps to one of the 6.
+**Mapping rules**: "Path Traversal" → `arbitrary_file_rw`. "Code Injection" / "Template Injection" → `rce`. "SQLi" → `sql_injection`. "Reflected/Stored XSS" → `xss` (auto-triggering only). "Information Disclosure" is NOT a supported type — exclude it unless it maps to one of the 8.
+
+**XSS scope rule**: Only auto-triggering XSS (reflected on navigation, stored that fires on page load). Self-XSS and non-auto-triggering XSS remain EXCLUDED.
 
 ## Your Role
 
@@ -450,8 +454,8 @@ Before advancing from one step to the next, the orchestrator MUST verify the fol
 ### After Step 4 → Before Step 5
 
 - [ ] `workspace/vulnerabilities.json` exists and is valid JSON
-- [ ] All vulnerability types are in the 6 supported types: `jq '[.vulnerabilities[].type] | unique' workspace/vulnerabilities.json` returns only allowed values
-- [ ] No `sql_injection`, `path_traversal`, `xxe`, `xss`, `idor`, `lfi`, `auth_bypass` types present
+- [ ] All vulnerability types are in the 8 supported types: `jq '[.vulnerabilities[].type] | unique' workspace/vulnerabilities.json` returns only allowed values
+- [ ] No `path_traversal`, `xxe`, `idor`, `lfi`, `auth_bypass` types present (these are unsupported; path_traversal → arbitrary_file_rw, xxe → arbitrary_file_rw)
 - [ ] Every finding has `entry_point.reachability` = `reachable` or `conditional`
 - [ ] Every finding has `confidence` >= 7
 - [ ] `filter_summary` section exists showing Phase 2 filtering was performed

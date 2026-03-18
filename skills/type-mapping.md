@@ -2,7 +2,7 @@
 
 All vulnerability findings MUST use one of the 6 supported type keys below. The `type` field is a **machine-readable lowercase key**, NEVER a descriptive English name.
 
-## 6 Supported Types
+## 8 Supported Types
 
 | Type Key | Description |
 |----------|-------------|
@@ -12,6 +12,8 @@ All vulnerability findings MUST use one of the 6 supported type keys below. The 
 | `arbitrary_file_rw` | Arbitrary File Read/Write |
 | `dos` | Denial of Service |
 | `command_injection` | Command Injection |
+| `sql_injection` | SQL Injection |
+| `xss` | Cross-Site Scripting |
 
 ## Mapping: Descriptive Names to Type Keys
 
@@ -39,8 +41,18 @@ Path Traversal, path_traversal, Path Traversal (commonprefix bypass), Zip Slip (
 
 Denial of Service, denial_of_service, Denial of Service (ReDoS / Resource Exhaustion), ReDoS, redos, XML Bomb, Decompression Bomb
 
+### MAP to `sql_injection`
+
+SQL Injection, sql_injection, SQLi, Blind SQL Injection, Error-Based SQL Injection, Time-Based Blind SQL Injection, Union-Based SQL Injection, Boolean-Based SQL Injection, Second-Order SQL Injection, NoSQL Injection, MongoDB Injection, CQL Injection
+
+### MAP to `xss`
+
+Cross-Site Scripting, XSS, xss, Reflected XSS, Stored XSS, Persistent XSS, DOM-Based XSS, DOM XSS, Cross-Site Scripting (XSS), cross_site_scripting, HTML Injection leading to XSS, Template Injection leading to client-side XSS
+
+> **XSS Scope Rule**: Only auto-triggering XSS is valid. Self-XSS and non-auto-triggering stored XSS are excluded per filtering-rules.md rule #28. Reflected XSS that fires on normal navigation and stored XSS that auto-executes are VALID findings.
+
 ## EXCLUDE (Not Supported)
 
-SQL Injection, XXE, XSS, Authentication Bypass, Broken Access Control, Information Disclosure, Hardcoded Credentials, Weak Cryptography, IDOR, Log Spoofing, arbitrary_plugin_loading, credential_exposure_via_environment, insecure_temp_file, JWT Signature Not Verified, Default No-Auth Configuration
+XXE (map to `arbitrary_file_rw` if file read occurs), Authentication Bypass, Broken Access Control, Information Disclosure, Hardcoded Credentials, Weak Cryptography, IDOR, Log Spoofing, arbitrary_plugin_loading, credential_exposure_via_environment, insecure_temp_file, JWT Signature Not Verified, Default No-Auth Configuration, Self-XSS, CSV Injection, HTML Injection (no script execution)
 
 **Rule**: If a finding cannot be mapped to one of the 6 types, it MUST be excluded. NEVER invent new type names.

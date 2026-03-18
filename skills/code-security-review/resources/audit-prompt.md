@@ -36,10 +36,16 @@ Findings MUST map to one of these 6 types. Findings that cannot be mapped are ex
 | `ssrf` | `requests.get(user_url)`, URL fetching without allowlist, DNS rebinding |
 | `arbitrary_file_rw` | `open(user_input)`, path traversal, zip slip, unrestricted file upload, LFI |
 | `dos` | ReDoS, XML bomb, hash collision, deeply nested JSON/XML, single-request algorithmic complexity |
+| `sql_injection` | `cursor.execute(f"...")`, `"SELECT ... " + user_input`, ORM `.raw(f"...")`, `.execute(text(f"..."))`, `Model.objects.raw(f"...")` |
+| `xss` | User-controlled data rendered in HTML without escaping: `render_template_string(user_input)`, `innerHTML = user_data`, `Markup(user_input)`, `mark_safe(user_input)`, `dangerouslySetInnerHTML` |
 
-### Additional Categories (for context, but findings must map to the 6 types above)
+**sql_injection scope**: Only for webapp/service targets with a database backend accessed via HTTP endpoints. Not valid for library/CLI targets.
 
-- SQL injection, XXE, XSS, auth bypass, secrets exposure — scan for these during Phase 1 discovery, but they are **not supported output types**. If found, check if they can be mapped (e.g., Code Injection → `rce`, Path Traversal → `arbitrary_file_rw`). If unmappable, exclude.
+**xss scope**: Only auto-triggering XSS. Reflected XSS that executes on normal GET navigation, or stored XSS that fires on page load. Self-XSS and non-auto-triggering XSS are EXCLUDED.
+
+### Additional Categories (for context, but findings must map to the 8 types above)
+
+- XXE, auth bypass, secrets exposure — scan for these during Phase 1 discovery, but they are **not supported output types**. If found, check if they can be mapped (e.g., XXE → `arbitrary_file_rw`, Code Injection → `rce`, Path Traversal → `arbitrary_file_rw`). If unmappable, exclude.
 
 ### Notes
 - Even if something is only exploitable from the local network, it can still be a HIGH severity issue

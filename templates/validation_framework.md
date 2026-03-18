@@ -143,6 +143,8 @@ Scan the PoC script source code for forbidden patterns. If any match, the result
 | SSRF | `requests.get('http://127.0.0.1:59876')` or any direct connection to 59876 from the PoC |
 | Insecure Deser | `touch /tmp/deserialized_flag` or direct file creation in PoC code |
 | DoS | Concurrent flood requests, manually stopping the service |
+| SQL Injection | Direct database connections (`psycopg2.connect()`, `pymysql.connect()`, `sqlite3.connect()`) — injection MUST go through the target app's HTTP interface |
+| XSS | Browser automation (`selenium`, `playwright`) — reflection check MUST use HTTP response body analysis only |
 
 **Rule**: The forbidden patterns apply to the PoC's own logic, NOT to payload strings embedded in the attack. For example, `payload = "__import__('os').system('/tmp/invoke')"` is valid (it's a string sent to the target), but `os.system('/tmp/invoke')` called directly in the PoC is INVALID.
 
@@ -157,6 +159,8 @@ Scan the PoC script source code for forbidden patterns. If any match, the result
 | SSRF | Listener on 59876 receives any connection | `docker exec <container> cat /tmp/ssrf_result.txt \| grep -c .` (non-empty) |
 | Insecure Deser | `/tmp/deserialized_flag` file exists | `docker exec <container> test -f /tmp/deserialized_flag && echo EXISTS` |
 | DoS | Response time >= 10x baseline | Compare `attack_time / baseline_time >= 10` |
+| SQL Injection | SQL error in HTTP response OR time >= 4× baseline OR boolean diff >= 50 bytes | `docker exec <container> curl -sf "http://localhost:<port>/endpoint?id=%27" \| grep -iE "sql syntax\|ORA-\|syntax error"` |
+| XSS | Unique marker present unescaped in HTTP response body | `docker exec <container> curl -sf "http://localhost:<port>/endpoint?q=<payload>" \| grep "<MARKER>"` |
 
 ### Step 5: Output Result
 

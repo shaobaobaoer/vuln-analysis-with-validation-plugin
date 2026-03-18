@@ -70,10 +70,10 @@ Read `workspace/target.json`. Determine `project_type` and `valid_vuln_types`.
 Does the original source code contain HTTP route definitions
 (@app.route, urlpatterns, router.get, @Controller, app.listen)?
   YES → project_type = "webapp" or "service"
-        valid_vuln_types = all 6 types
+        valid_vuln_types = all 8 types
   NO  → Does it have a network daemon/server (grpc.server, socket.bind in main loop)?
           YES → project_type = "service"
-                valid_vuln_types = ["rce","insecure_deserialization","arbitrary_file_rw","dos","command_injection"]
+                valid_vuln_types = ["rce","insecure_deserialization","arbitrary_file_rw","dos","command_injection","sql_injection"]
           NO  → Does it have a CLI entry point (argparse, click, cobra)?
                   YES → project_type = "cli"
                         valid_vuln_types = ["rce","arbitrary_file_rw","dos","command_injection"]
@@ -81,6 +81,8 @@ Does the original source code contain HTTP route definitions
                         valid_vuln_types = ["dos","command_injection","insecure_deserialization"*]
                         network_exploitable = false
 ```
+
+> **Note on sql_injection and xss scoping**: `sql_injection` is valid for webapp/service targets that use a backend database ORM or raw SQL queries in their HTTP handlers. `xss` is valid ONLY for webapp targets that render HTML from user-controlled data — not APIs that return JSON. If the target only returns JSON, XSS is not applicable.
 
 *`insecure_deserialization` valid for library ONLY if the library itself receives serialized bytes over a network socket (rare). Not valid for libraries that only `pickle.load()` local files.
 
@@ -277,13 +279,23 @@ Rank by: severity > reachability > exploitability > impact > confidence (thresho
 
 ## Supported Vulnerability Types
 
-Every finding in `workspace/vulnerabilities.json` MUST have its `type` field set to one of these 6 supported types:
+Every finding in `workspace/vulnerabilities.json` MUST have its `type` field set to one of these 8 supported types:
 
-`rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`
+`rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss`
+
+**Type scope by target type**:
+- `webapp`: all 8 types
+- `service`: rce, ssrf (if HTTP), insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection
+- `cli`: rce, arbitrary_file_rw, dos, command_injection
+- `library`: dos, command_injection, insecure_deserialization (network-receiving only)
 
 > **Full type mapping**: See `skills/type-mapping.md` for comprehensive descriptive-name → type-key mapping, EXCLUDE list, and all observed variations.
 
-**CRITICAL**: The `type` field MUST be the exact lowercase key (e.g., `rce`), NEVER a descriptive English name (e.g., `Arbitrary Code Execution`). If a finding cannot be mapped to one of the 6 types, EXCLUDE it and place in `excluded_findings[]`.
+**CRITICAL**: The `type` field MUST be the exact lowercase key (e.g., `rce`), NEVER a descriptive English name. If a finding cannot be mapped to one of the 8 types, EXCLUDE it and place in `excluded_findings[]`.
+
+**sql_injection scope**: Valid for webapp/service targets with a backend database. Validate with error-based, time-based blind, or boolean-based techniques via the target's HTTP interface. See `skills/validate-sql-injection/SKILL.md`.
+
+**xss scope**: Valid for webapp targets only. Only auto-triggering XSS (reflected on normal navigation, or stored that fires on page load). Self-XSS and non-auto-triggering XSS are EXCLUDED. See `skills/validate-xss/SKILL.md`.
 
 ## Output Schemas (MANDATORY — must match exactly)
 
@@ -350,6 +362,8 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
         "call_chain": "route /api/exec → handler() → eval(user_input)"
       },
       "attacker_preconditions": "none",
+      "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "cvss_score": 9.8,
       "known_disclosures": [
         {
           "source": "nvd|huntr|github_advisory|osv|snyk",
@@ -395,6 +409,8 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
 | `description` | string | Detailed description |
 | `entry_point` | object | Must include `type`, `path`, `access_level`, `reachability`, `call_chain` |
 | `attacker_preconditions` | string | `"none"` if no preconditions; otherwise describe what the attacker must already control (e.g., `"write access to model directory"`, `"local code execution"`). MANDATORY for `insecure_deserialization` and `arbitrary_file_rw` types. |
+| `cvss_vector` | string | Auto-calculated CVSS 3.1 base vector string (e.g., `"AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"`). See §CVSS Auto-Calculation below. |
+| `cvss_score` | number | CVSS 3.1 base score (0.0–10.0). Auto-calculated from `cvss_vector`. |
 | `known_disclosures` | array | Prior CVE/huntr/advisory matches — `[]` if none found. NEVER omit this key. |
 
 **`entry_point.access_level` valid values** (MANDATORY — `?` is NOT acceptable):
@@ -488,6 +504,93 @@ entry_point = {
 - `auth_required: true` → `access_level: "auth"` (requires logged-in user)
 - `requires_admin: true` → `access_level: "admin"` (requires admin role)
 - Requires local disk / filesystem access → `access_level: "local"`
+
+## CVSS Auto-Calculation (MANDATORY for every finding)
+
+Calculate the CVSS 3.1 base score automatically from the finding's metadata. This ensures consistent, objective severity calibration.
+
+### CVSS 3.1 Vector Derivation Rules
+
+**Attack Vector (AV)** — from `entry_point.access_level`:
+| access_level | AV |
+|---|---|
+| `none` (network, no auth) | `AV:N` (Network) |
+| `auth` (requires login) | `AV:N` (Network) |
+| `admin` (requires admin) | `AV:N` (Network) |
+| `local` (local only) | `AV:L` (Local) |
+
+**Attack Complexity (AC)**:
+| Situation | AC |
+|---|---|
+| Direct injection, no special conditions | `AC:L` (Low) |
+| Requires specific config, race condition, chained steps | `AC:H` (High) |
+
+**Privileges Required (PR)** — from `entry_point.access_level`:
+| access_level | PR |
+|---|---|
+| `none` | `PR:N` (None) |
+| `auth` | `PR:L` (Low) |
+| `admin` | `PR:H` (High) |
+| `local` | `PR:L` (Low) |
+
+**User Interaction (UI)**:
+| Situation | UI |
+|---|---|
+| Attacker exploits directly (RCE, SQLi, SSRF, command injection) | `UI:N` (None) |
+| Requires victim to view page (XSS, stored XSS) | `UI:R` (Required) |
+
+**Scope (S)**:
+| Situation | S |
+|---|---|
+| Vulnerability affects only the vulnerable component | `S:U` (Unchanged) |
+| Vulnerability escapes to affect other components (XSS affects browser, SSRF affects internal network) | `S:C` (Changed) |
+
+**Confidentiality (C), Integrity (I), Availability (A)** — from vulnerability type:
+
+| Type | C | I | A |
+|------|---|---|---|
+| `rce` | H | H | H |
+| `ssrf` | H | L | N |
+| `insecure_deserialization` | H | H | H |
+| `arbitrary_file_rw` (read+write) | H | H | N |
+| `arbitrary_file_rw` (read only) | H | N | N |
+| `arbitrary_file_rw` (write only) | N | H | N |
+| `dos` | N | N | H |
+| `command_injection` | H | H | H |
+| `sql_injection` (data extract) | H | L | N |
+| `sql_injection` (blind) | L | N | N |
+| `xss` (reflected) | L | L | N |
+| `xss` (stored, auto-trigger) | L | H | N |
+
+### CVSS 3.1 Score Lookup Table
+
+After assembling the vector, map to a score using this approximation:
+
+| Vector | Approx Score |
+|--------|-------------|
+| AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H | 9.8 (CRITICAL) |
+| AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N | 9.1 (CRITICAL) |
+| AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:N | 8.2 (HIGH) |
+| AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H | 8.8 (HIGH) |
+| AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:H/A:N | 8.2 (HIGH) |
+| AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N | 7.1 (HIGH) |
+| AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N | 5.3 (MEDIUM) |
+| AV:N/AC:L/PR:L/UI:R/S:C/C:L/I:L/A:N | 5.4 (MEDIUM) |
+| AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H | 7.8 (HIGH) |
+
+> For scores not in this table, use the [CVSS 3.1 calculator algorithm](https://www.first.org/cvss/calculator/3.1) or estimate from the nearest row. Include the vector string even if the numeric score is approximate.
+
+### Output Format
+
+Add to every finding in `vulnerabilities.json`:
+```json
+{
+  "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+  "cvss_score": 9.8
+}
+```
+
+**Calibration check**: If your CVSS score is >= 9.0 but the finding has `access_level: "auth"` or `access_level: "local"`, your vector is wrong — re-derive. CRITICAL scores require `PR:N` AND `AV:N`.
 
 ## Output
 
