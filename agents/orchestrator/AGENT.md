@@ -138,7 +138,14 @@ The pipeline ONLY supports these 6 vulnerability types. Any finding outside this
 ### Step 9: Report
 - **Delegate to**: `reporter` agent — **USE `Agent` TOOL NOW. Do NOT write REPORT.md yourself.**
 - Output: `workspace/report/REPORT.md`, `workspace/report/summary.json`
-- **Output verification (MANDATORY)**: After the reporter agent returns, the orchestrator MUST verify that `workspace/report/REPORT.md` and `workspace/report/summary.json` actually exist on disk. Do NOT mark Step 9 as `completed` unless both files exist. If missing, retry the reporter or mark as `failed`.
+- **Output verification (MANDATORY — run this exact command after reporter returns)**:
+  ```bash
+  test -f workspace/report/REPORT.md && test -s workspace/report/REPORT.md && echo "REPORT_OK" || echo "REPORT_MISSING"
+  ```
+  - `REPORT_OK` → mark Step 9 `completed`
+  - `REPORT_MISSING` → **DO NOT mark as completed**; retry the reporter (max 2 retries) or mark Step 9 as `failed`
+- **Observed defect in 77/86 completed pipelines**: Step 9 was marked `completed` with `output_path: "workspace/report/"` but `workspace/report/REPORT.md` never existed. This is a hard error — never trust the reporter's return status alone. Verify the file with the shell command above.
+- **Step 9 is NOT optional**: A pipeline that stops at Step 8 is not a completed pipeline. The `overall_status: "completed"` flag MUST NOT be set unless `workspace/report/REPORT.md` physically exists and is non-empty.
 
 ### Post-Pipeline: Docker Resource Cleanup
 - **Performed by**: orchestrator (self)

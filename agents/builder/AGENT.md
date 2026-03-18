@@ -180,7 +180,23 @@ Only load the sub-modules needed for this project.
 
 **Python Dependency Management**: Use `uv` exclusively — `uv pip install --system -r requirements.txt` or `uv sync`. NEVER use `pip install`, `conda`, or `python -m venv` in Dockerfiles. Install uv: `curl -LsSf https://astral.sh/uv/install.sh | sh`.
 
-**HEALTHCHECK (MANDATORY)**: Every generated Dockerfile MUST include a `HEALTHCHECK` instruction. Every `docker-compose.yml` MUST include `healthcheck:` for each service. Audit of 41 runs found 29% of Dockerfiles and 44% of compose files missing healthchecks.
+**HEALTHCHECK (MANDATORY)**: Every generated Dockerfile MUST include a `HEALTHCHECK` instruction. Every `docker-compose.yml` MUST include `healthcheck:` for each service. Audit of 175 runs found 25% of Dockerfiles still missing healthchecks. Use the appropriate pattern for the target type:
+
+```dockerfile
+# Web app / HTTP service
+HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
+  CMD curl -f http://localhost:8080/health || curl -f http://localhost:8080/ || exit 1
+
+# Python library (no HTTP server) — import check
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+  CMD python3 -c "import <package_name>; print('ok')" || exit 1
+
+# CLI tool — version check
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+  CMD <tool_name> --version || exit 1
+```
+
+**Self-check**: Is there a `HEALTHCHECK` instruction in the Dockerfile I just wrote? If NO — add it before proceeding. A missing HEALTHCHECK will cause Step 3 (Docker Readiness Gate) to fail.
 
 **Docker Resource Labeling**: Apply `vuln-analysis.pipeline-id=${PIPELINE_ID}` to all `docker build`, `docker run`, and compose services/networks. See §Docker Resource Labeling above for examples.
 
