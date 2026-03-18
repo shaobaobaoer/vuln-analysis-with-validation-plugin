@@ -60,6 +60,50 @@ Every finding in `vulnerabilities.json` MUST trace to a file in this original so
 
 ---
 
+### Phase 1.5: Target Type Gate (MANDATORY — run immediately after Phase 1)
+
+Read `workspace/target.json`. Determine `project_type` and `valid_vuln_types`.
+
+**Decision tree**:
+
+```
+Does the original source code contain HTTP route definitions
+(@app.route, urlpatterns, router.get, @Controller, app.listen)?
+  YES → project_type = "webapp" or "service"
+        valid_vuln_types = all 6 types
+  NO  → Does it have a network daemon/server (grpc.server, socket.bind in main loop)?
+          YES → project_type = "service"
+                valid_vuln_types = ["rce","insecure_deserialization","arbitrary_file_rw","dos","command_injection"]
+          NO  → Does it have a CLI entry point (argparse, click, cobra)?
+                  YES → project_type = "cli"
+                        valid_vuln_types = ["rce","arbitrary_file_rw","dos","command_injection"]
+                  NO  → project_type = "library"
+                        valid_vuln_types = ["dos","command_injection","insecure_deserialization"*]
+                        network_exploitable = false
+```
+
+*`insecure_deserialization` valid for library ONLY if the library itself receives serialized bytes over a network socket (rare). Not valid for libraries that only `pickle.load()` local files.
+
+**If `project_type == "library"` and `network_exploitable == false`**:
+
+Set these constraints for ALL subsequent phases:
+- **ONLY scan for vulnerabilities of types in `valid_vuln_types`** — skip SSRF, RCE-via-web entirely
+- **All entry points are `access_level: "local"`** — library functions are called by application code on the same host
+- **Severity cap: HIGH maximum** for all findings
+- **If no qualifying findings exist after filtering**: output `vulnerabilities: []` — this is correct and honest. Write in `filter_summary`: `"target_type_gate": "library target — restricted to dos/command_injection; no qualifying findings"`. Do NOT try to work around this by creating HTTP wrappers.
+
+**Library target valid finding examples**:
+- ReDoS in tokenizer regex: `lib.tokenize(crafted_string)` hangs → valid `dos`
+- `subprocess.run(cmd, shell=True)` where `cmd` includes caller-supplied path → valid `command_injection`
+- Library with built-in TCP server that `pickle.loads()` incoming bytes → valid `insecure_deserialization`
+
+**Library target INVALID finding examples** (EXCLUDE these):
+- "SSRF via pandas.read_csv(url)" — pandas has no HTTP server; attacker needs calling app to exist
+- "RCE via /api/eval endpoint" — that endpoint was created by the builder, not pandas
+- "Insecure deserialization via torch.load(file)" — requires attacker to already have local filesystem write access
+
+---
+
 ### Phase 2: Known Vulnerability Lookup (MANDATORY for ALL targets)
 
 For each discovered vulnerability pattern AND for the project as a whole, conduct an exhaustive disclosure lookup across all 5 sources below. Use the `WebSearch` and `WebFetch` tools.

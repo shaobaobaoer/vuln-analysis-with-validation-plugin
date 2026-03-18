@@ -99,13 +99,41 @@ All Docker resources MUST be labeled with `vuln-analysis.pipeline-id=<pipeline_i
 - Anti-cheat legitimacy check: PoC must exploit through the target app, not call system APIs directly
 - Shared infrastructure: trigger binary (`/tmp/invoke`), flag file (`/tmp/flag`), TCP listeners (ports 59875/59876), `inotifywait`
 
+## Target Selection Guidelines
+
+**Choose targets that have their own network attack surface.** A target is high-value if an attacker can reach it over the network without controlling any intermediate application code.
+
+### High-Value Targets (genuine remote attack surface)
+
+| Category | Examples |
+|----------|---------|
+| LLM/ML serving stacks | vLLM, text-generation-inference, LocalAI, Ollama, TorchServe, Triton |
+| ML infrastructure | MLflow server, Kubeflow, Ray Serve, KServe, Seldon Core, BentoML server |
+| Data pipeline orchestrators | Apache Airflow, Prefect, Dagster, Metaflow |
+| Web applications | Any Flask/FastAPI/Django/Express app with real users |
+| Distributed ML internals | Spark REST API (port 6066), Horovod rendezvous, PyTorch RPC |
+| AI agent frameworks | Open WebUI, LibreChat, anything.llm, DB-GPT, PrivateGPT |
+| Experiment trackers | MLflow, Weights & Biases on-prem, ClearML server |
+
+### Low-Value Targets (pure libraries — no network attack surface)
+
+For these targets, the pipeline can only find `dos` (algorithmic) or `command_injection` (shell=True in library). Scanning them for `rce` / `ssrf` / remote deser is methodologically invalid:
+
+> pandas, numpy, scikit-learn, scipy, requests, urllib3, boto3, botocore, sqlalchemy, PyMySQL, psycopg2, PyTorch (training), TensorFlow (training), Keras, tokenizers, spaCy, NLTK, gensim, h5py, PyTables, matplotlib, seaborn, pillow, scikit-image, catboost, xgboost, chainer, transformers (inference-only), dill, cloudpickle
+
+**If a low-value target is submitted**: Set `valid_vuln_types: ["dos", "command_injection"]`, note the limitation, and do NOT create HTTP wrappers. If no findings of these types exist, output `vulnerabilities: []` — this is a correct and honest result.
+
 ## Pipeline Steps
 
-1. **Target Extraction** (mandatory) → `workspace/target.json`
+1. **Target Extraction** (mandatory) → `workspace/target.json` — includes `project_type`, `network_exploitable`, `valid_vuln_types`
 2. **Environment Setup** (mandatory) → `workspace/Dockerfile`, `workspace/docker-compose.yml`
+   - For `library` targets: Dockerfile installs library only, NO HTTP server
 3. **Docker Readiness Gate** (mandatory) → Verify target app runs correctly inside Docker
+   - For `library` targets: verify `import <library>` succeeds, not HTTP health check
 4. **Vulnerability Analysis** (mandatory) → `workspace/vulnerabilities.json`
+   - Gated by `valid_vuln_types` from Step 1
 5. **PoC Generation** → `workspace/poc_scripts/`
+   - For `library` targets: `import lib; lib.func(payload)` — never HTTP
 6. **Environment Init** → Deploy trigger binary, start listeners, set up monitors
 7. **Reproduction + Validation** → Execute PoCs + legitimacy check + type-specific validation → `workspace/results.json`
 8. **Retry Loop** → Max 5 retries per vulnerability (re-initialize monitors each retry)
