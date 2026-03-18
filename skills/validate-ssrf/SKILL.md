@@ -78,3 +78,32 @@ result=$(docker exec <container> cat /tmp/ssrf_result.txt 2>/dev/null)
 
 - SSRF controlling only the **path** (not host/protocol) is NOT a vulnerability
 - SSRF in client-side JS/TS is NOT valid (can't bypass firewalls from client)
+
+
+## Output: Write to results.json (MANDATORY)
+
+After validation, write the result using the **canonical schema** (see `skills/poc-writer/SKILL.md §results.json Schema`). The `validation_result` object MUST contain exactly two fields: `marker` and `evidence`. Do NOT add extra keys.
+
+```json
+{
+  "vuln_id": "VULN-001",
+  "type": "<type>",
+  "poc_script": "poc_scripts/poc_<type>_001.py",
+  "status": "SUCCESS",
+  "exit_code": 0,
+  "retries": 0,
+  "entry_point_used": "<entry point used>",
+  "validation_result": {
+    "marker": "CONFIRMED",
+    "evidence": "<one sentence: what specific proof was observed — e.g., TCP listener received test_message, file /tmp/flag was written, etc.>"
+  }
+}
+```
+
+**Marker values**:
+- `"CONFIRMED"` → success condition met AND legitimacy check passed
+- `"NOT_REPRODUCED"` → no proof observed within timeout
+- `"PARTIAL"` → partial evidence (e.g., server error but no marker file)
+- `"ERROR"` → validation infrastructure failure
+
+**FORBIDDEN**: Adding extra keys to `validation_result` (e.g., `anti_cheat`, `legitimacy_check`, `marker_found`, `inotify_verified`, `method`, `details`, `type`, `exit_code` inside `validation_result`). Put ALL evidence in the `evidence` string. Observed: 150+ different extra key names used across 175 production runs — none of them are valid.
