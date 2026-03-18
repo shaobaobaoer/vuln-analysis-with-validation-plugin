@@ -153,7 +153,7 @@ Generate `workspace/report/summary.json` conforming to the following schema:
       "entry_point": {
         "type": "webapp_endpoint",
         "path": "POST /api/exec",
-        "access_level": "public"
+        "access_level": "none"
       },
       "known_disclosure": "CVE-2024-12345"
     }
