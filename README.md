@@ -52,13 +52,16 @@ All PoC scripts and Python execution happen **inside Docker containers**. Nothin
 | `arbitrary_file_rw` | Arbitrary File Read/Write | `skills/validate-arbitrary-file-rw/` |
 | `dos` | Denial of Service | `skills/validate-dos/` |
 | `command_injection` | Command Injection | `skills/validate-command-injection/` |
+| `sql_injection` | SQL / NoSQL Injection | `skills/validate-sql-injection/` |
+| `xss` | Cross-Site Scripting (auto-triggering) | `skills/validate-xss/` |
+| `idor` | Insecure Direct Object Reference / BOLA | `skills/validate-idor/` |
 
 ### Code Security Review
 
 The plugin includes a mandatory 3-phase code audit process at `skills/code-security-review/`:
 
 1. **Audit** — Context research, comparative analysis, vulnerability assessment
-2. **Filter** — Hard exclusion regex, AI filtering (19 rules), precedent check (17 rules), confidence scoring (threshold >= 7)
+2. **Filter** — Hard exclusion regex, AI filtering (28 rules), precedent check (22+ rules), confidence scoring (threshold >= 7)
 3. **Report** — Filter summary table, detailed findings, excluded findings list
 
 ## Architecture
@@ -114,7 +117,7 @@ vuln-analysis/
 │   │   ├── SKILL.md                       #     Mandatory audit → filter → report
 │   │   └── resources/                     #     Filtering rules, exclusion patterns
 │   ├── poc-writer/SKILL.md                #   Step 5: PoC script patterns
-│   └── validate-*/SKILL.md               #   6 type-specific validators (Steps 7-8)
+│   └── validate-*/SKILL.md               #   9 type-specific validators (Steps 7-8)
 │
 ├── agents/                                # Agent definitions
 │   ├── orchestrator/AGENT.md              #   Pipeline coordinator (opus)
@@ -130,13 +133,13 @@ vuln-analysis/
 ├── core/                                  # Python framework
 │   ├── pipeline.py                        #   Pipeline orchestrator
 │   ├── runner.py                          #   PoC script runner
-│   ├── validators/                        #   Base + 6 concrete validators
+│   ├── validators/                        #   Base + 9 concrete validators
 │   ├── reporters/                         #   Markdown + JSON report generators
 │   └── runners/                           #   Docker manager
 │
 └── examples/
     ├── dockerfiles/                        #   Example Docker configs
-    ├── poc_scripts/                        #   One example PoC per vuln type (6 scripts)
+    ├── poc_scripts/                        #   Example PoC scripts per vuln type
     └── poc_manifest.example.json
 ```
 
@@ -237,7 +240,7 @@ workspace/
 
 ## Safety & Ethics
 
-> See `CLAUDE.md §Safety Invariants` for the full 8 rules (Docker-only execution, mandatory steps, uv, local-only builds, label-based cleanup).
+> See `CLAUDE.md §Safety Invariants` for the full 9 rules (Docker-only execution, mandatory steps, uv, local-only builds, label-based cleanup, anti-cheat).
 
 This tool is intended solely for:
 - Authorized penetration testing engagements
