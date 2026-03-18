@@ -307,7 +307,7 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
 | `target` | string | Project name |
 | `filter_summary` | object | Filtering breakdown — MUST include `phase1_candidates`, `phase2_filtered`, `final_count`, **`disclosures_searched: true`**, `disclosure_sources_queried[]`, `total_prior_disclosures_found` |
 | `vulnerabilities` | array | Kept findings (confidence >= 7, reachable, supported type) |
-| `excluded_findings` | array | All excluded findings with reasons (may be empty `[]`) |
+| `excluded_findings` | array | All excluded findings with reasons — **MUST always be present, even if empty (`[]`)**. Omitting this key is a hard schema error. |
 
 **Required per-vulnerability keys** (MUST be present in every entry):
 
@@ -352,8 +352,10 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
 // FORBIDDEN — flat array with no wrapper
 [{"id": "VULN-001", "type": "rce"}]
 
-// FORBIDDEN — missing filter_summary or excluded_findings
+// FORBIDDEN — missing filter_summary or excluded_findings KEY
+// Even if nothing was filtered, excluded_findings: [] MUST be present
 {"vulnerabilities": [...]}
+{"target": "mylib", "filter_summary": {...}, "vulnerabilities": [...]}  // excluded_findings key absent: FORBIDDEN
 
 // FORBIDDEN — missing entry_point or confidence in a finding
 {"id": "VULN-001", "type": "rce", "severity": "high"}
