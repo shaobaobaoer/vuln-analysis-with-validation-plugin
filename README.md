@@ -55,6 +55,8 @@ All PoC scripts and Python execution happen **inside Docker containers**. Nothin
 | `sql_injection` | SQL / NoSQL Injection | `skills/validate-sql-injection/` |
 | `xss` | Cross-Site Scripting (auto-triggering) | `skills/validate-xss/` |
 | `idor` | Insecure Direct Object Reference / BOLA | `skills/validate-idor/` |
+| `jndi_injection` | JNDI Injection / Log4Shell (**Java only**) | `skills/validate-jndi-injection/` |
+| `prototype_pollution` | Prototype Chain Pollution (**JS/TS only**) | `skills/validate-prototype-pollution/` |
 
 ### Code Security Review
 
@@ -117,7 +119,7 @@ vuln-analysis/
 │   │   ├── SKILL.md                       #     Mandatory audit → filter → report
 │   │   └── resources/                     #     Filtering rules, exclusion patterns
 │   ├── poc-writer/SKILL.md                #   Step 5: PoC script patterns
-│   └── validate-*/SKILL.md               #   9 type-specific validators (Steps 7-8)
+│   └── validate-*/SKILL.md               #   11 type-specific validators (Steps 7-8; 2 are language-gated)
 │
 ├── agents/                                # Agent definitions
 │   ├── orchestrator/AGENT.md              #   Pipeline coordinator (opus)
@@ -133,7 +135,7 @@ vuln-analysis/
 ├── core/                                  # Python framework
 │   ├── pipeline.py                        #   Pipeline orchestrator
 │   ├── runner.py                          #   PoC script runner
-│   ├── validators/                        #   Base + 9 concrete validators
+│   ├── validators/                        #   Base + 11 concrete validators (2 language-gated)
 │   ├── reporters/                         #   Markdown + JSON report generators
 │   └── runners/                           #   Docker manager
 │

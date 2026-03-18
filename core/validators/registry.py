@@ -491,5 +491,125 @@ _ALL_VALIDATORS: list[tuple[str, type[BaseValidator]]] = [
     ("idor", IDORValidator),
 ]
 
+
+# ---------------------------------------------------------------------------
+# 10. JNDI Injection (Java-specific)
+# ---------------------------------------------------------------------------
+class JNDIInjectionValidator(BaseValidator):
+    """Confirms JNDI injection (e.g. Log4Shell) via callback or RCE evidence.
+
+    PoC scripts inject ${jndi:ldap://...} payloads. Confirmation requires
+    either a TCP callback on the listener port or a marker file written via
+    remote class loading.
+    """
+
+    JNDI_PATTERNS = [
+        r"JNDI_CONFIRMED",
+        r"jndi[_\s-]*injection[_\s-]*(?:confirmed|successful)",
+        r"jndi[_\s-]*lookup[_\s-]*(?:received|triggered|initiated)",
+        r"callback[_\s-]*received.*?(?:ldap|rmi|dns)",
+        r"remote[_\s-]*class[_\s-]*loaded",
+        r"log4shell[_\s-]*(?:confirmed|triggered)",
+    ]
+
+    @property
+    def vuln_type(self) -> str:
+        return "jndi_injection"
+
+    def validate(self, response: dict[str, Any]) -> ValidationResult:
+        stdout = self._safe_get(response, "stdout")
+        stderr = self._safe_get(response, "stderr")
+        combined = f"{stdout}\n{stderr}"
+
+        for pat in self.JNDI_PATTERNS:
+            match = re.search(pat, combined, re.IGNORECASE)
+            if match:
+                return ValidationResult(
+                    status=ValidationStatus.CONFIRMED,
+                    evidence=match.group(0),
+                    details={"pattern_matched": pat},
+                )
+
+        # Partial: Java CommunicationException referencing attacker host
+        partial_patterns = [
+            r"CommunicationException.*127\.0\.0\.1",
+            r"NamingException.*ldap://",
+            r"Connection refused.*59877",
+        ]
+        for pat in partial_patterns:
+            match = re.search(pat, combined, re.IGNORECASE)
+            if match:
+                return ValidationResult(
+                    status=ValidationStatus.PARTIAL,
+                    evidence=f"JNDI lookup attempted but blocked: {match.group(0)[:100]}",
+                    details={"pattern_matched": pat},
+                )
+
+        return ValidationResult(status=ValidationStatus.NOT_REPRODUCED)
+
+
+# ---------------------------------------------------------------------------
+# 11. Prototype Pollution (JavaScript/TypeScript-specific)
+# ---------------------------------------------------------------------------
+class PrototypePollutionValidator(BaseValidator):
+    """Confirms prototype pollution via privilege escalation or RCE via gadget.
+
+    PoC scripts inject __proto__ payloads. Confirmation via:
+    - Marker file creation (RCE via template engine gadget chain)
+    - Admin property reflected in response (privilege escalation)
+    """
+
+    PP_PATTERNS = [
+        r"PP_CONFIRMED|PROTOTYPE_POLLUTION_CONFIRMED",
+        r"prototype[_\s-]*pollution[_\s-]*(?:confirmed|successful)",
+        r"privilege[_\s-]*escalation[_\s-]*confirmed",
+        r"rce[_\s-]*via[_\s-]*gadget[_\s-]*(?:confirmed|successful)",
+        r"pp[_\s-]*rce[_\s-]*[a-f0-9]{8,}",          # marker file pattern
+        r"\"admin\"\s*:\s*true",                        # admin property reflected
+        r"\"isAdmin\"\s*:\s*true",
+        r"\"role\"\s*:\s*\"admin\"",
+    ]
+
+    @property
+    def vuln_type(self) -> str:
+        return "prototype_pollution"
+
+    def validate(self, response: dict[str, Any]) -> ValidationResult:
+        stdout = self._safe_get(response, "stdout")
+        stderr = self._safe_get(response, "stderr")
+        combined = f"{stdout}\n{stderr}"
+
+        for pat in self.PP_PATTERNS:
+            match = re.search(pat, combined, re.IGNORECASE)
+            if match:
+                return ValidationResult(
+                    status=ValidationStatus.CONFIRMED,
+                    evidence=match.group(0),
+                    details={"pattern_matched": pat},
+                )
+
+        return ValidationResult(status=ValidationStatus.NOT_REPRODUCED)
+
+
+# ---------------------------------------------------------------------------
+# Auto-registration
+#
+# Each concrete validator declares its own VULN_TYPE class constant so we
+# can register without constructing a throw-away instance.
+# ---------------------------------------------------------------------------
+_ALL_VALIDATORS: list[tuple[str, type[BaseValidator]]] = [
+    ("rce", RCEValidator),
+    ("ssrf", SSRFValidator),
+    ("insecure_deserialization", InsecureDeserializationValidator),
+    ("arbitrary_file_rw", ArbitraryFileRWValidator),
+    ("dos", DoSValidator),
+    ("command_injection", CommandInjectionValidator),
+    ("sql_injection", SQLInjectionValidator),
+    ("xss", XSSValidator),
+    ("idor", IDORValidator),
+    ("jndi_injection", JNDIInjectionValidator),
+    ("prototype_pollution", PrototypePollutionValidator),
+]
+
 for _vuln_type, _cls in _ALL_VALIDATORS:
     _registry.register(_vuln_type, _cls)

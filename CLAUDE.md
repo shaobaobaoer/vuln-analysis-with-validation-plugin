@@ -151,13 +151,17 @@ For these targets, the pipeline can only find `dos` (algorithmic) or `command_in
 
 ## Vulnerability Types Covered
 
-rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection, xss, idor
+rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection, xss, idor, jndi_injection, prototype_pollution
 
 **Type scope by target type**:
-- `webapp`: all 9 types (idor requires integer-keyed user-owned resources, not UUID-keyed)
+- `webapp`: all 11 types (idor requires integer-keyed user-owned resources, not UUID-keyed; jndi_injection only for Java; prototype_pollution only for JS/TS)
 - `service`: all except xss and idor (no HTML rendering, no user-owned resource model)
 - `cli`: rce, arbitrary_file_rw, dos, command_injection
-- `library`: dos, command_injection, insecure_deserialization (only if network-receiving)
+- `library`: dos, command_injection, insecure_deserialization (only if network-receiving), prototype_pollution (JS/TS libs only, if gadget chain exists)
+
+**Language-specific types (HARD GATES)**:
+- `jndi_injection`: Java targets ONLY — never output for Python, Go, JS, Ruby, or any other language
+- `prototype_pollution`: JavaScript/TypeScript targets ONLY — never output for Python, Java, Go, or any other language
 
 ## Entry Point Reachability (MANDATORY)
 

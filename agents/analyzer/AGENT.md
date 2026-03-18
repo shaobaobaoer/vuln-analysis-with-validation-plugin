@@ -407,7 +407,7 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
 | Key | Type | Description |
 |-----|------|-------------|
 | `id` | string | Unique identifier (VULN-001, VULN-002, ...) |
-| `type` | string | One of the 9 supported types (exact lowercase key) |
+| `type` | string | One of the 11 supported types (exact lowercase key); language-gated types must match target language |
 | `title` | string | Short descriptive title |
 | `severity` | string | `critical`, `high`, `medium`, or `low` |
 | `confidence` | integer | 7-10 (findings < 7 are excluded) |
@@ -568,6 +568,9 @@ Calculate the CVSS 3.1 base score automatically from the finding's metadata. Thi
 | `xss` (stored, auto-trigger) | L | H | N |
 | `idor` (read access to another user's data) | H | N | N |
 | `idor` (read + modify another user's data) | H | H | N |
+| `jndi_injection` (Log4Shell / InitialContext.lookup) | H | H | H |
+| `prototype_pollution` (RCE via template gadget) | H | H | H |
+| `prototype_pollution` (privilege escalation only) | L | H | N |
 
 ### CVSS 3.1 Score Lookup Table
 
@@ -586,6 +589,9 @@ After assembling the vector, map to a score using this approximation:
 | AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H | 7.8 (HIGH) |
 | AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N | 6.5 (MEDIUM) |
 | AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N | 8.1 (HIGH) |
+| AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H | 10.0 (CRITICAL) |
+| AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H | 8.1 (HIGH) |
+| AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:H/A:N | 6.5 (MEDIUM) |
 
 > For scores not in this table, use the [CVSS 3.1 calculator algorithm](https://www.first.org/cvss/calculator/3.1) or estimate from the nearest row. Include the vector string even if the numeric score is approximate.
 

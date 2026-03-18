@@ -1,20 +1,22 @@
 # Vulnerability Type Mapping (Authoritative Source)
 
-All vulnerability findings MUST use one of the 9 supported type keys below. The `type` field is a **machine-readable lowercase key**, NEVER a descriptive English name.
+All vulnerability findings MUST use one of the 11 supported type keys below. The `type` field is a **machine-readable lowercase key**, NEVER a descriptive English name.
 
-## 9 Supported Types
+## 11 Supported Types
 
-| Type Key | Description |
-|----------|-------------|
-| `rce` | Remote Code Execution |
-| `ssrf` | Server-Side Request Forgery |
-| `insecure_deserialization` | Insecure Deserialization |
-| `arbitrary_file_rw` | Arbitrary File Read/Write |
-| `dos` | Denial of Service |
-| `command_injection` | Command Injection |
-| `sql_injection` | SQL Injection |
-| `xss` | Cross-Site Scripting |
-| `idor` | Insecure Direct Object Reference / Broken Access Control |
+| Type Key | Description | Language Scope |
+|----------|-------------|---------------|
+| `rce` | Remote Code Execution | All |
+| `ssrf` | Server-Side Request Forgery | All |
+| `insecure_deserialization` | Insecure Deserialization | All |
+| `arbitrary_file_rw` | Arbitrary File Read/Write | All |
+| `dos` | Denial of Service | All |
+| `command_injection` | Command Injection | All |
+| `sql_injection` | SQL Injection | All |
+| `xss` | Cross-Site Scripting | All |
+| `idor` | Insecure Direct Object Reference / Broken Access Control | All |
+| `jndi_injection` | JNDI Injection (Log4Shell pattern) | **Java only** |
+| `prototype_pollution` | Prototype Chain Pollution | **JavaScript / TypeScript only** |
 
 ## Mapping: Descriptive Names to Type Keys
 
@@ -58,8 +60,20 @@ Insecure Direct Object Reference, IDOR, idor, Broken Access Control, Horizontal 
 
 > **IDOR Scope Rule**: Only horizontal privilege escalation (user A accessing user B's resources) or complete missing authentication on user-specific endpoints. UUID-based IDs are assumed unguessable (Precedent #2 — exclude). Admin-only resources are intentional (not IDOR). MUST have evidence the access control is absent (not just a theoretical missing check).
 
+### MAP to `jndi_injection`
+
+JNDI Injection, Log4Shell, Log4j RCE, Log4j2 RCE, CVE-2021-44228, JNDI Lookup via User Input, InitialContext.lookup injection, JndiTemplate injection, LDAP Injection via JNDI, RMI Injection via JNDI, Java Naming API Injection
+
+> **JNDI Scope Rule**: Java targets only. Only valid if user-controlled input flows into a JNDI lookup or a logger call that evaluates `${jndi:...}`. Non-Java targets MUST NOT have `jndi_injection` findings.
+
+### MAP to `prototype_pollution`
+
+Prototype Pollution, prototype chain pollution, __proto__ injection, constructor.prototype injection, Object.prototype pollution, Lodash merge pollution, deepmerge pollution, qs allowPrototypes pollution
+
+> **Prototype Pollution Scope Rule**: JavaScript/TypeScript/Node.js targets only. Only valid when there is a traceable path from user input to a deep-merge, recursive assign, or `__proto__`/`constructor.prototype` property write — AND either RCE via template gadget or privilege escalation is demonstrable. Generic prototype pollution without measurable impact is excluded. Non-JS/TS targets MUST NOT have `prototype_pollution` findings.
+
 ## EXCLUDE (Not Supported)
 
-XXE (map to `arbitrary_file_rw` if file read occurs), Vertical Privilege Escalation / Admin Bypass (not IDOR — different attack), Information Disclosure, Hardcoded Credentials, Weak Cryptography, Log Spoofing, arbitrary_plugin_loading, credential_exposure_via_environment, insecure_temp_file, JWT Signature Not Verified, Default No-Auth Configuration, Self-XSS, CSV Injection, HTML Injection (no script execution), IDOR via UUID guessing (assumed unguessable)
+XXE (map to `arbitrary_file_rw` if file read occurs), Vertical Privilege Escalation / Admin Bypass (not IDOR — different attack), Information Disclosure, Hardcoded Credentials, Weak Cryptography, Log Spoofing, arbitrary_plugin_loading, credential_exposure_via_environment, insecure_temp_file, JWT Signature Not Verified, Default No-Auth Configuration, Self-XSS, CSV Injection, HTML Injection (no script execution), IDOR via UUID guessing (assumed unguessable), Prototype Pollution without measurable impact (no RCE gadget, no privilege bypass)
 
-**Rule**: If a finding cannot be mapped to one of the 9 types, it MUST be excluded. NEVER invent new type names.
+**Rule**: If a finding cannot be mapped to one of the 11 types, it MUST be excluded. NEVER invent new type names.

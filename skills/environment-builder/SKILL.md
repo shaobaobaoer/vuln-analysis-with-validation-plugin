@@ -207,6 +207,174 @@ Execute loaded sub-modules in order:
 
 ---
 
+## Step 3a: Language-Specific Dockerfile Templates
+
+When no Dockerfile or docker-compose.yml exists, generate one from the templates below based on detected language. Select the template that matches `HAS_JAVA`, `HAS_NODE`, `HAS_PYTHON`, or Go detection, then customize based on the project's actual build files.
+
+### Template: Java (Maven)
+
+```dockerfile
+# Stage 1: Build
+FROM maven:3.9-eclipse-temurin-21 AS builder
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline -B       # cache deps first
+COPY src ./src
+RUN mvn package -DskipTests -B
+
+# Stage 2: Run
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
+COPY --from=builder /app/target/*.jar app.jar
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=5s --start-period=40s --retries=5 \
+    CMD curl -sf http://localhost:8080/ || exit 1
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+> **Log4j note**: If the target uses Log4j2 versions 2.0-beta9 to 2.14.1 (detectable in pom.xml), do NOT apply mitigations — keep vulnerable version intact for testing. Add comment in Dockerfile: `# Log4j version kept at vulnerable level for security testing`.
+
+### Template: Java (Gradle)
+
+```dockerfile
+FROM gradle:8.5-jdk21 AS builder
+WORKDIR /app
+COPY build.gradle settings.gradle ./
+COPY gradle ./gradle
+RUN gradle dependencies --no-daemon    # cache deps
+COPY src ./src
+RUN gradle bootJar --no-daemon -x test
+
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
+COPY --from=builder /app/build/libs/*.jar app.jar
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=5s --start-period=40s --retries=5 \
+    CMD curl -sf http://localhost:8080/ || exit 1
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+### Template: Python (uv-based — MANDATORY for all Python projects)
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+
+# Install uv (NEVER use pip directly for deps)
+RUN pip install --no-cache-dir uv
+
+COPY requirements*.txt pyproject.toml ./  2>/dev/null || true
+COPY . .
+
+# Install with uv
+RUN uv pip install --system -r requirements.txt 2>/dev/null || uv sync
+
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
+    CMD curl -sf http://localhost:8080/ || exit 1
+
+CMD ["python", "app.py"]  # adjust to actual entry point
+```
+
+> **Note**: If `pyproject.toml` exists, prefer `uv sync` over `uv pip install -r requirements.txt`. If the project uses Flask: `CMD ["flask", "run", "--host=0.0.0.0", "--port=8080"]`. If FastAPI: `CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]`.
+
+### Template: Node.js / TypeScript
+
+```dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev          # install production deps only initially
+
+# For TypeScript: install all deps for build step
+COPY tsconfig*.json ./
+RUN npm ci 2>/dev/null || npm install
+COPY . .
+RUN npm run build 2>/dev/null || true   # skip if no build script
+
+# Production stage
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist   2>/dev/null || true
+COPY --from=builder /app/src ./src     2>/dev/null || true
+COPY --from=builder /app/package*.json ./
+
+EXPOSE 3000
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
+    CMD wget -qO- http://localhost:3000/ || exit 1
+
+CMD ["node", "dist/index.js"]   # adjust: node src/index.js, npm start, etc.
+```
+
+> **For Express apps**: entry point is typically `node src/app.js` or `npm start`. For NestJS: `node dist/main.js`. For Next.js: `npm run start` after build.
+
+### Template: Go
+
+```dockerfile
+# Stage 1: Build
+FROM golang:1.22-alpine AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download                     # cache deps
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/server  # adjust path
+
+# Stage 2: Run (minimal image)
+FROM alpine:3.19
+RUN apk --no-cache add ca-certificates curl
+WORKDIR /app
+COPY --from=builder /app/server .
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=5 \
+    CMD curl -sf http://localhost:8080/health || exit 1
+ENTRYPOINT ["./server"]
+```
+
+> **Go build path detection**: Look for `main.go` in `cmd/<name>/`, `cmd/`, or project root. Use `go build -o server .` if main is in root. Check `go.mod` for module name.
+
+### Template: Ruby (Sinatra / Rails)
+
+```dockerfile
+FROM ruby:3.3-slim
+RUN apt-get update && apt-get install -y build-essential curl libpq-dev && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4 --without development test
+COPY . .
+EXPOSE 3000
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
+    CMD curl -sf http://localhost:3000/ || exit 1
+CMD ["bundle", "exec", "ruby", "app.rb", "-p", "3000", "-o", "0.0.0.0"]
+# For Rails: CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+```
+
+### Template: PHP (Laravel / Symfony)
+
+```dockerfile
+FROM php:8.3-apache
+RUN apt-get update && apt-get install -y zip unzip curl && rm -rf /var/lib/apt/lists/*
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+WORKDIR /var/www/html
+COPY . .
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN chown -R www-data:www-data /var/www/html
+EXPOSE 80
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
+    CMD curl -sf http://localhost/ || exit 1
+```
+
+### Dockerfile Universal Requirements
+
+Regardless of language, every generated Dockerfile MUST:
+1. **Include `HEALTHCHECK`** — required for Docker readiness gate (Step 3)
+2. **Label the image** — pass `--label "vuln-analysis.pipeline-id=${PIPELINE_ID}"` during `docker build`
+3. **Expose the correct port** — match what the app listens on (detect from env vars, config files, README)
+4. **NOT patch vulnerabilities** — if a target has a known vulnerable dependency, keep it! The goal is reproducible exploitation, not hardening
+5. **Use multi-stage builds for compiled languages** — Java, Go: keeps final image small and runnable
+
+---
+
 ## Step 3b: SQL Injection Testing Setup (only when `sql_injection` in `valid_vuln_types`)
 
 When the vulnerability scanner will test for SQL injection, the database must have **realistic schema and seed data** before PoC execution. An empty database makes boolean-based and time-based blind SQLi much harder to distinguish from normal errors.

@@ -189,6 +189,8 @@ def exploit(target, timeout):
 | SQL Injection | Error-based/time-based/boolean/union injection via HTTP | SQL error in response OR time delay >= 4× OR boolean diff OR marker in response |
 | XSS | Unique marker reflected unescaped in HTML response | Unique marker found unescaped in response body |
 | IDOR | Two-user test: register user1+user2, authenticate as user1, access user2's resource via user2_id | HTTP 200 with user2's data in response body |
+| JNDI Injection (**Java only**) | Inject `${jndi:ldap://127.0.0.1:59877/id}` in all HTTP headers (User-Agent, X-Forwarded-For, etc.) | TCP callback received on port 59877 OR marker file `/tmp/jndi_confirmed_<id>` created |
+| Prototype Pollution (**JS/TS only**) | Inject `{"__proto__": {"admin": true}}` or RCE gadget payload via POST body/query param | Marker file `/tmp/pp_rce_<id>` created (RCE) OR admin property reflected in response (privesc) |
 
 ### SQL Injection PoC Pattern
 
@@ -345,6 +347,8 @@ poc_dos_006.py
 poc_sql_injection_007.py
 poc_xss_008.py
 poc_idor_009.py
+poc_jndi_injection_010.py        # Java targets only
+poc_prototype_pollution_011.py   # JavaScript/TypeScript targets only
 ```
 
 **ANTI-PATTERNS (FORBIDDEN — observed in actual pipeline runs)**:
@@ -370,7 +374,7 @@ poc_rce_003_retry.py             # WRONG: "_retry" suffix appended after number
 
 **The ONLY valid pattern is**: `poc_<type>_<NNN>.py` where `<type>` is exactly one of `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss` and `<NNN>` is a 3-digit zero-padded number.
 
-The `<type>` MUST be an exact match to one of: `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss`, `idor`.
+The `<type>` MUST be an exact match to one of: `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss`, `idor`, `jndi_injection`, `prototype_pollution`.
 
 ## poc_scripts/ Directory Rules
 

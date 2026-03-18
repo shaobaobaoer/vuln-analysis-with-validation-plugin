@@ -43,21 +43,57 @@ The following fallback strategies are **STRICTLY FORBIDDEN**. If Docker is unava
 
 ## Supported Vulnerability Types
 
-The pipeline supports these 9 vulnerability types. Any finding outside this list MUST be mapped to one of these or excluded:
+The pipeline supports **11 vulnerability types**. Any finding outside this list MUST be mapped to one of these or excluded:
 
-| Type Key | Description | Valid For |
-|----------|-------------|-----------|
-| `rce` | Remote Code Execution | webapp, service, cli, library |
-| `ssrf` | Server-Side Request Forgery | webapp only |
-| `insecure_deserialization` | Insecure Deserialization | webapp, service, library (if network-receiving) |
-| `arbitrary_file_rw` | Arbitrary File Read/Write | webapp, service, cli |
-| `dos` | Denial of Service | all types |
-| `command_injection` | Command Injection | all types |
-| `sql_injection` | SQL Injection | webapp, service |
-| `xss` | Cross-Site Scripting | webapp only |
-| `idor` | Insecure Direct Object Reference / Broken Access Control | webapp only |
+| Type Key | Description | Valid For | Language Scope |
+|----------|-------------|-----------|---------------|
+| `rce` | Remote Code Execution | webapp, service, cli, library | All |
+| `ssrf` | Server-Side Request Forgery | webapp only | All |
+| `insecure_deserialization` | Insecure Deserialization | webapp, service, library (if network-receiving) | All |
+| `arbitrary_file_rw` | Arbitrary File Read/Write | webapp, service, cli | All |
+| `dos` | Denial of Service | all types | All |
+| `command_injection` | Command Injection | all types | All |
+| `sql_injection` | SQL Injection | webapp, service | All |
+| `xss` | Cross-Site Scripting | webapp only | All |
+| `idor` | Insecure Direct Object Reference | webapp only | All |
+| `jndi_injection` | JNDI Injection (Log4Shell) | webapp, service | **Java only** |
+| `prototype_pollution` | Prototype Chain Pollution → RCE/privesc | webapp, service, library | **JavaScript/TypeScript only** |
 
-**Mapping rules**: "Path Traversal" → `arbitrary_file_rw`. "Code Injection" / "Template Injection" → `rce`. "SQLi" → `sql_injection`. "Reflected/Stored XSS" → `xss` (auto-triggering only). "Broken Access Control" / "BOLA" / "Horizontal Privilege Escalation" → `idor` (integer IDs only, not UUIDs). "Information Disclosure" is NOT a supported type — exclude it unless it maps to one of the 9.
+**Mapping rules**: "Path Traversal" → `arbitrary_file_rw`. "Code Injection" / "Template Injection" → `rce`. "SQLi" → `sql_injection`. "Reflected/Stored XSS" → `xss` (auto-triggering only). "Broken Access Control" / "BOLA" / "Horizontal Privilege Escalation" → `idor` (integer IDs only, not UUIDs). "Log4Shell" / "JNDI Lookup" → `jndi_injection` (Java only). "__proto__ pollution" / "lodash merge pollution" → `prototype_pollution` (JS/TS only). "Information Disclosure" is NOT a supported type — exclude it unless it maps to one of the 11.
+
+---
+
+## Stage-Activation Gates (MANDATORY — wrong-stage skill invocation is FORBIDDEN)
+
+Each pipeline stage activates a SPECIFIC, LIMITED set of skills. No skill should be invoked outside its designated stage. This prevents false positives from pre-mature scanning and context pollution.
+
+| Pipeline Step | Stage | Skills/Sub-agents Activated | NOT activated at this stage |
+|-------------|-------|----------------------------|-----------------------------|
+| **Step 1** | Target Extraction | `skills/target-extraction/SKILL.md` only | All validators, vuln scanner, poc-writer, reporter |
+| **Step 2** | Environment Setup | `skills/environment-builder/SKILL.md` + sub-modules (`app/`, `db/`, `helpers/`) | Validators, vuln scanner, poc-writer, reporter |
+| **Step 3** | Docker Readiness Gate | Docker CLI commands only (`docker ps`, `curl` health check) | All analysis skills |
+| **Step 4** | Vulnerability Analysis | `skills/vulnerability-scanner/SKILL.md` + `skills/code-security-review/SKILL.md` | All `validate-*` skills, poc-writer, reporter |
+| **Step 5** | PoC Generation | `skills/poc-writer/SKILL.md` only | All `validate-*` skills, reporter |
+| **Step 6** | Environment Init | Docker CLI only (TCP listeners, trigger binary, inotifywait) | All analysis + reporting skills |
+| **Step 7** | Reproduction | `skills/validate-<type>/SKILL.md` matching each vuln's type — ONE validator per vuln | vuln scanner, poc-writer, reporter |
+| **Step 8** | Retry Loop | `skills/validate-<type>/SKILL.md` + `skills/poc-writer/SKILL.md` (rewrite failed PoC only) | reporter |
+| **Step 9** | Report | Reporter agent + `agents/reporter/AGENT.md` | All other skills |
+
+### Stage-Activation Rules (ENFORCED)
+
+1. **Validators activate in Steps 7-8 ONLY**: Never invoke `validate-rce`, `validate-ssrf`, `validate-jndi-injection`, `validate-prototype-pollution`, or any other `validate-*` skill during Steps 1-6 or Step 9.
+
+2. **Vulnerability scanner activates in Step 4 ONLY**: Never invoke `skills/vulnerability-scanner/SKILL.md` or `skills/code-security-review/SKILL.md` during Steps 1-3, 5-9.
+
+3. **PoC-writer activates in Step 5 (initial generation) and Step 8 (retry rewrites) ONLY**: Never invoke `skills/poc-writer/SKILL.md` during Steps 1-4, 6, 7, 9.
+
+4. **Reporter activates in Step 9 ONLY**: Never invoke `agents/reporter/AGENT.md` until all reproduction attempts (Steps 7-8) are complete.
+
+5. **Language-gated validators**: Only invoke `validate-jndi-injection` when `target.json.language == "java"`. Only invoke `validate-prototype-pollution` when `target.json.language` is `"javascript"` or `"typescript"`. Invoking wrong-language validators wastes tokens and produces invalid results.
+
+6. **Target-type-gated validators**: Only invoke `validate-xss` and `validate-idor` for `webapp` targets. Only invoke `validate-ssrf` for `webapp` and `service` targets. Skip these entirely for `library` and `cli` targets.
+
+---
 
 **XSS scope rule**: Only auto-triggering XSS (reflected on navigation, stored that fires on page load). Self-XSS and non-auto-triggering XSS remain EXCLUDED.
 
@@ -415,7 +451,7 @@ After each step completes (status set to `completed` by the sub-agent), the orch
 | 1 - Target Extraction | `workspace/target.json` | File exists, valid JSON, contains required keys: `project_name`, `language`, `framework`, `version`, `entry_points`. **`entry_points` array must be non-empty** — these define the attack surface. **`version` is mandatory** — the disclosure lookup in Step 4 uses it to determine whether known CVEs apply to the scanned version |
 | 2 - Environment Setup | `workspace/Dockerfile` | File exists; Docker container is running and responsive (health check); **`ENVIRONMENT_SETUP.md` exists** (mandatory documentation); **Dockerfile uses `uv` for Python deps** (NEVER pip); **Docker resources are labeled** with `vuln-analysis.pipeline-id` |
 | 3 - Docker Readiness Gate | Running container | `docker ps` shows container up; `curl` to main endpoint returns HTTP 200 (or CLI runs); health check passes. If fail → return to Step 2 |
-| 4 - Vulnerability Analysis | `workspace/vulnerabilities.json` | File exists, valid JSON, contains `vulnerabilities` array, each entry has `id`, `type`, `severity`, `confidence`, `entry_point`. **Type must be one of the 9 supported types** (rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection, xss, idor). **No XXE, auth bypass, or other unsupported types.** **Every finding must have `entry_point.reachability` = `reachable` or `conditional`.** **Confidence >= 7.** Abort if fails |
+| 4 - Vulnerability Analysis | `workspace/vulnerabilities.json` | File exists, valid JSON, contains `vulnerabilities` array, each entry has `id`, `type`, `severity`, `confidence`, `entry_point`. **Type must be one of the 11 supported types** (rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection, xss, idor, jndi_injection, prototype_pollution). **Language-gated types enforced**: jndi_injection → Java only; prototype_pollution → JS/TS only. **No XXE, auth bypass, or other unsupported types.** **Every finding must have `entry_point.reachability` = `reachable` or `conditional`.** **Confidence >= 7.** Abort if fails |
 | 5 - PoC Generation | `workspace/poc_manifest.json` | File exists, valid JSON, at least one PoC entry referencing an existing script file. **Each script follows naming convention `poc_<type>_<NNN>.py`** (e.g., `poc_rce_001.py`). **Each script accepts `--target` and `--timeout` CLI args.** |
 | 6 - Environment Init | Monitoring infrastructure | TCP listeners active, trigger binary deployed, inotifywait running (as applicable) |
 | 7 - Reproduction | `workspace/results.json` | File exists, valid JSON, each entry has `vuln_id`, `status`, and `validation_result` |
