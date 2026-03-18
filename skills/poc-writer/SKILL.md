@@ -188,6 +188,7 @@ def exploit(target, timeout):
 | Command Injection | Shell metacharacters + marker | TCP listener on 59875 receives `test_message` |
 | SQL Injection | Error-based/time-based/boolean/union injection via HTTP | SQL error in response OR time delay >= 4× OR boolean diff OR marker in response |
 | XSS | Unique marker reflected unescaped in HTML response | Unique marker found unescaped in response body |
+| IDOR | Two-user test: register user1+user2, authenticate as user1, access user2's resource via user2_id | HTTP 200 with user2's data in response body |
 
 ### SQL Injection PoC Pattern
 

@@ -200,6 +200,25 @@ A finding is **NOT XSS** unless user-controlled content is rendered in an HTML r
 
 **Evidence required**: Point to the exact line where user input is rendered into HTML context without escaping. Must be server-side rendering, not client-side only. Include the Content-Type and template context.
 
+30. **IDOR Quality Gate** (apply to ALL idor candidates):
+
+A finding is **NOT IDOR** unless there is direct evidence that a user-controlled ID is used to access another user's resource **without an ownership check**. Auto-exclude if:
+
+| Situation | Decision |
+|-----------|----------|
+| ID is a UUID / GUID (e.g., `uuid4()`, RFC 4122 format) | **EXCLUDE** — assumed unguessable (Precedent #2) |
+| Endpoint is admin-only (`@admin_required`, `@staff_required`, admin panel URL) | **EXCLUDE** — intentional broad access for privileged users |
+| ORM query scoped to current user: `Model.objects.filter(pk=id, user=request.user)` | **EXCLUDE** — ownership check present |
+| Resource is public/shared (all authenticated users meant to access it) | **EXCLUDE** — no ownership boundary to violate |
+| `@permission_classes([IsOwner])` or DRF `has_object_permission()` applied | **EXCLUDE** — object-level permission enforced |
+| Django: `request.user.objects.get(pk=id)` or `get_object_or_404(Model, pk=id, user=request.user)` | **EXCLUDE** — properly scoped |
+| `Model.objects.get(pk=id)` with NO ownership check, endpoint is user-specific | **KEEP** — IDOR |
+| `db.query(Item).filter(Item.id == item_id).first()` with no `Item.owner == user` assertion | **KEEP** — IDOR |
+| `find_by_id(params[:id])` without `current_user` scope in Rails | **KEEP** — IDOR |
+| No auth check at all on user-specific endpoint | **KEEP** as `idor` (type: unauthenticated access) |
+
+**Evidence required**: Identify the exact ORM/query call that retrieves the resource using a user-controlled ID, AND confirm the absence of an ownership filter or permission check before the resource is returned. Quote both the vulnerable line and confirm there is no `@permission_required` / `.filter(user=current_user)` in scope.
+
 26. **Severity inflation**: A severity label must be calibrated against attack prerequisites. The following downgrade rules apply automatically:
     - Finding with `access_level: "local"` → maximum severity is **MEDIUM** (attacker already has local access)
     - `dos` with `access_level: "auth"` → maximum severity is **MEDIUM**

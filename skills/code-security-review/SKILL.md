@@ -64,6 +64,7 @@ Examine code for these security categories:
 
 **Authentication & Authorization Issues:**
 - Auth bypass, privilege escalation, session flaws, JWT vulnerabilities
+- **IDOR (Broken Access Control)**: `Model.objects.get(pk=id)` without user scope, missing `has_object_permission()`, `/api/resources/{id}` returning other users' data; integer/sequential IDs only — UUID-keyed resources EXCLUDED
 
 **Crypto & Secrets Management:**
 - Hardcoded keys/passwords, weak algorithms, improper key storage
@@ -162,6 +163,17 @@ A finding is NOT XSS unless user-controlled content is rendered in HTML **withou
 - JSON-only API responses → EXCLUDE (no HTML execution context)
 - Auto-triggering only: reflected on normal GET navigation OR stored that fires on page load
 - Self-XSS (requires victim action beyond normal browsing) → EXCLUDE
+
+### Step 2c-iii — IDOR Quality Gate (apply to ALL idor candidates)
+
+A finding is NOT IDOR unless a user-controlled ID retrieves another user's resource **with no ownership check**. See `resources/filtering-rules.md §IDOR Quality Gate` (rule #30).
+
+- UUID/GUID-keyed resources → EXCLUDE (Precedent #2 — assumed unguessable)
+- Admin-only endpoints → EXCLUDE (intentional broad access)
+- ORM queries scoped to `current_user` → EXCLUDE (ownership enforced)
+- `Model.objects.get(pk=id)` without user scoping on user-specific endpoint → KEEP
+
+**Evidence required**: Quote the exact ORM/query line using the user-supplied ID AND confirm no ownership check exists in that scope.
 
 ### Step 2c — Intended Functionality Check
 
