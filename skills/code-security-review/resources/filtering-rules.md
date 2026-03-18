@@ -159,6 +159,15 @@ Specific guidance for common security patterns:
 
 24. **Duplicate findings sharing the same root-cause entry point**: If two or more findings share the same vulnerable function or HTTP endpoint as their root cause, only the highest-severity finding is kept. Additional findings against the same entry point must be merged into the primary finding's description or excluded. Exception: findings may be kept separately if they demonstrate completely different attack chains (e.g., both SSRF and RCE are possible through one endpoint via different mechanisms) — but must be explicitly noted as "same entry point, different attack chain".
 
+25. **Builder workspace entry_point paths are invalid**: Any finding whose `entry_point.path` points to a file in the `workspace/` directory, or to a file named `test_server.py`, `harness.py`, `vuln_test_server.py`, or any builder-generated wrapper — is invalid regardless of what vulnerability is claimed. The entry point does not exist in the original repository. **Exclude** with reason `"Builder-generated entry point: path resolves to test harness file, not original source"`. Observed: TensorRT produced 5 findings all through `workspace/test_server.py` — all invalid; only source-level findings are legitimate.
+
+26. **Severity inflation**: A severity label must be calibrated against attack prerequisites. The following downgrade rules apply automatically:
+    - Finding with `access_level: "local"` → maximum severity is **MEDIUM** (attacker already has local access)
+    - `dos` with `access_level: "auth"` → maximum severity is **MEDIUM**
+    - `insecure_deserialization` where `attacker_preconditions` describes filesystem write access → maximum severity is **MEDIUM**
+    - Reserve **CRITICAL** for genuinely unauthenticated, single-step, network-accessible exploits with full impact
+    - **Observed**: In 175 pipeline runs, 81% of findings were classified high/critical and 0% were low — calibrate deliberately.
+
 ---
 
 ## Signal Quality Criteria

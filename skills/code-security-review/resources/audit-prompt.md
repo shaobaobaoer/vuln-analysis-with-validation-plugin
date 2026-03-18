@@ -95,11 +95,21 @@ Findings MUST map to one of these 6 types. Findings that cannot be mapped are ex
 
 ## Severity Guidelines
 
-| Severity | Criteria |
-|----------|----------|
-| **HIGH** | Directly exploitable vulnerabilities leading to RCE, data breach, or authentication bypass |
-| **MEDIUM** | Vulnerabilities requiring specific conditions but with significant impact |
-| **LOW** | Defense-in-depth issues or lower-impact vulnerabilities |
+> **Calibration warning**: Observed in 175 production runs: 81% of findings were classified high/critical and 0% were low — this is inflation. Not every RCE is critical; not every DoS is high. Apply the criteria below strictly.
+
+| Severity | Criteria | Typical Examples |
+|----------|----------|-----------------|
+| **CRITICAL** | Unauthenticated, network-accessible, no user interaction, full impact (RCE/complete data compromise). CVSS ≥ 9.0 equivalent. | Unauthenticated RCE via HTTP endpoint, pre-auth remote code exec, network-accessible pickle deserialization with no preconditions |
+| **HIGH** | Exploitable with authentication, or requires one hop (auth bypass to reach), high impact. CVSS 7.0–8.9 equivalent. | Authenticated RCE, SSRF reaching internal services, auth-required command injection, file write as authenticated user |
+| **MEDIUM** | Requires specific conditions (auth + special role, specific config, chained steps), moderate impact. CVSS 4.0–6.9 equivalent. | Admin-only file read, SSRF limited to non-sensitive targets, DoS requiring sustained requests, path traversal under auth |
+| **LOW** | Very limited impact, requires local access, defense-in-depth issue. CVSS < 4.0 equivalent. | `access_level: "local"` deserialization (attacker already has local access), minor info disclosure, non-amplifiable DoS requiring authentication |
+
+**Calibration rules to prevent inflation**:
+- `access_level: "local"` findings MUST be at most MEDIUM (attacker already has local access = limited incremental impact)
+- `dos` findings with `access_level: "auth"` MUST be at most MEDIUM (authenticated DoS)
+- `insecure_deserialization` that requires attacker-controlled file on disk MUST be at most MEDIUM
+- `arbitrary_file_rw` with write-only (no read) and `access_level: "auth"` → HIGH at most
+- Reserve CRITICAL for genuinely unauthenticated, single-request, network-accessible exploits with full impact
 
 ## Confidence Scoring (1-10 Scale)
 
@@ -117,6 +127,8 @@ Findings MUST map to one of these 6 types. Findings that cannot be mapped are ex
 ## Final Reminder
 
 Focus on HIGH and MEDIUM findings only. Better to miss some theoretical issues than flood the report with false positives. Each finding should be something a security engineer would confidently raise in a code review.
+
+**Severity sanity check before output**: Count your critical/high/medium/low split. If low=0 and high+critical > 70%, you likely have severity inflation — re-calibrate using the downgrade rules above. A realistic distribution for a moderately-vulnerable project: 0–1 critical, 1–3 high, 1–2 medium, 0–1 low.
 
 ## Important Exclusions — Do NOT Report
 

@@ -183,6 +183,14 @@ For each finding that survived Phase 3c filtering, match it against the disclosu
 - If no match: set `known_disclosures: []` — NEVER omit this key
 - If the matched disclosure has `status: fixed` AND the scanned version >= `fixed_version`: note this in the finding description and reduce confidence by 1 (the vulnerability may already be patched in production)
 
+**Phase 3d.5 — Builder-Generated Entry Point Exclusion** (run BEFORE dedup):
+
+Before deduplication, scan ALL findings' `entry_point.path` values for builder-generated files:
+- **FORBIDDEN paths**: Any `entry_point.path` pointing to `workspace/`, `test_server.py`, `harness.py`, `app.py` (builder-written), `server.py` (builder-written) — these are builder-generated and MUST be excluded
+- **Self-check**: Does `entry_point.path` refer to a file in the **original cloned repository** (not `workspace/`)? If the path starts with `workspace/` or is a file you know the builder created, EXCLUDE the finding and add it to `excluded_findings[]` with reason `"Builder-generated entry point: finding traces to builder-written test harness, not original source"`
+- **Observed violation**: TensorRT had 5/6 findings with `entry_point.path: "workspace/test_server.py"` — all invalid, only 1 legitimate finding remained
+- Every legitimate entry_point.path MUST point to a source file in the original repository (e.g., `tools/Polygraphy/polygraphy/json/serde.py`, `src/app/routes.py`, not `workspace/server.py`)
+
 **Phase 3e — Deduplication** (run BEFORE Phase 3f):
 
 If two or more findings share the same `entry_point.path` AND `entry_point.method` (or the same vulnerable function for library targets), consolidate them:
@@ -190,6 +198,8 @@ If two or more findings share the same `entry_point.path` AND `entry_point.metho
 - Merge the other findings' descriptions into the primary finding's `description` field
 - Add the merged-away findings to `excluded_findings[]` with reason `"Deduplicated: same root-cause entry point as VULN-XXX"`
 - Exception: keep separate findings only if they demonstrate **completely different attack chains** (e.g., SSRF and RCE via different mechanisms through one endpoint) — must be explicitly noted
+
+> **Dedup anti-pattern observed**: BentoML had 4 findings all pointing to `/{api_name}` — these should have been consolidated to 1. ComfyUI had 5 findings all through `/prompt`. When you see 3+ findings sharing the same path, you MUST consolidate into one or two at most.
 
 **Phase 3f — Volume Cap**:
 
