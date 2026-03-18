@@ -292,18 +292,20 @@ Every finding in `workspace/vulnerabilities.json` MUST have its `type` field set
 ```json
 {
   "project_name": "example-project",
-  "project_type": "library|webapp|cli",
+  "project_type": "library|webapp|cli|service",
+  "network_exploitable": true,
+  "valid_vuln_types": ["rce", "ssrf", "dos"],
   "language": "python",
   "framework": "flask",
   "version": "1.2.3",
   "repo_url": "https://github.com/owner/repo",
   "entry_points": [
     {
-      "type": "webapp_endpoint|library_api|cli_command",
+      "type": "webapp_endpoint|library_api|cli_command|service_method",
       "path": "POST /api/exec|module.func()|tool --input",
-      "method": "POST",
+      "access_level": "none",
       "parameters": ["param1", "param2"],
-      "auth_required": false
+      "source_file": "app/views.py:42"
     }
   ],
   "dependencies": ["flask", "requests"],
