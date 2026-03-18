@@ -144,7 +144,24 @@ Automatically exclude findings matching:
 25. Missing HTTP security headers (`X-Frame-Options`, `HttpOnly`, `Secure`, `HSTS`)
 26. Image metadata not stripped (EXIF/metadata remaining in uploads)
 27. CSV injection (requires victim to open file and approve macro execution)
-28. Self-XSS or non-auto-triggering XSS
+28. **Self-XSS or non-auto-triggering XSS** — EXCEPTION: auto-triggering XSS (reflected on normal navigation, stored that fires on page load) is a VALID `xss` finding and must NOT be excluded by this rule. Only exclude: (a) self-XSS requiring victim to paste into browser console, (b) stored XSS requiring victim to click a separate link beyond normal browsing
+
+### Step 2c-i — SQL Injection Quality Gate (apply to ALL sql_injection candidates)
+
+A finding is NOT SQL Injection unless user-controlled input flows into a SQL string **without parameterization**. See `resources/filtering-rules.md §SQL Injection Quality Gate` (rule #28) for full decision matrix.
+
+**Evidence required**: Identify the exact line where user input is interpolated into a SQL query string. Parameterized queries (`cursor.execute("...%s", (val,))`) are safe and must be excluded.
+
+**NoSQL injection** (MongoDB `$where`, Elasticsearch raw queries) also maps to `sql_injection` — apply same gate.
+
+### Step 2c-ii — XSS Quality Gate (apply to ALL xss candidates)
+
+A finding is NOT XSS unless user-controlled content is rendered in HTML **without escaping** in an auto-executing context. See `resources/filtering-rules.md §XSS Quality Gate` (rule #29).
+
+- Frameworks with auto-escaping (Jinja2 default, React JSX, Angular) → EXCLUDE unless bypass detected
+- JSON-only API responses → EXCLUDE (no HTML execution context)
+- Auto-triggering only: reflected on normal GET navigation OR stored that fires on page load
+- Self-XSS (requires victim action beyond normal browsing) → EXCLUDE
 
 ### Step 2c — Intended Functionality Check
 

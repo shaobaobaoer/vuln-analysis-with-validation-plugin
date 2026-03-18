@@ -163,6 +163,43 @@ Specific guidance for common security patterns:
 
 27. **Library target + HTTP endpoint findings are systematically invalid**: If the target is a pure library (no built-in HTTP server in original source), any finding whose attack path goes through an HTTP endpoint is almost certainly exploiting a builder-created Flask/FastAPI server, not the library itself. Root cause documented in 175-run audit: builder routinely creates endpoints like `/load_pickle`, `/eval`, `/file/read`, `/deserialize`, `/api/model/save` that don't exist in the original library. **Exclude** any library-target finding with `entry_point.type: "webapp_endpoint"` unless you can trace a specific route definition in the original git-cloned source code. Observed in: `requests`, `catboost`, `xgboost`, `chainer`, `pandas`, `mxnet`, `botocore`, `sqlalchemy`, `composio`, `transformers`. For library targets, all findings MUST have `entry_point.type: "library_api"` and `access_level: "local"`.
 
+28. **SQL Injection Quality Gate** (apply to ALL sql_injection candidates):
+
+A finding is **NOT SQL Injection** unless the target code constructs a SQL query string using **user-controlled input without parameterization**. Auto-exclude if:
+
+| Situation | Decision |
+|-----------|----------|
+| ORM uses parameterized queries exclusively: `cursor.execute("SELECT ... WHERE id=%s", (id,))` | **EXCLUDE** — properly parameterized |
+| SQLAlchemy ORM `.filter_by()`, `.filter()` with column objects — no raw string | **EXCLUDE** — ORM handles parameterization |
+| Django ORM `.filter(field=value)`, `.get(pk=pk)` — no `.raw()` | **EXCLUDE** — ORM parameterized by default |
+| `.raw(f"SELECT ... {user_input}")` or `.execute(f"... {user_input}")` | **KEEP** — string interpolation into SQL |
+| `cursor.execute("SELECT ... " + user_input)` or `% user_input` (%-format) | **KEEP** — string concatenation |
+| `db.session.execute(text(f"... {user_input}"))` | **KEEP** — raw SQL with interpolation |
+
+**Evidence required**: Point to the exact line where user input flows into a SQL string **without parameterization**. Parameterized queries (where user input is passed as a tuple/list argument separate from the query string) are NOT vulnerable.
+
+**NoSQL injection**: MongoDB `$where` with user input, Elasticsearch raw query strings with user input → also map to `sql_injection`. Exclude if using safe query builders (pymongo `.find({"field": user_value})` is safe — user_value is never executed as code).
+
+29. **XSS Quality Gate** (apply to ALL xss candidates):
+
+A finding is **NOT XSS** unless user-controlled content is rendered in an HTML response **without escaping** in a context where it would execute as JavaScript. Auto-exclude if:
+
+| Situation | Decision |
+|-----------|----------|
+| Jinja2/Twig/Django template with `autoescaping=True` (default) | **EXCLUDE** — framework escapes by default |
+| React JSX without `dangerouslySetInnerHTML` | **EXCLUDE** — React auto-escapes in JSX |
+| Angular without `bypassSecurityTrustHtml` | **EXCLUDE** — Angular sanitizes by default |
+| API endpoint that returns JSON (not HTML) | **EXCLUDE** — JSON responses don't execute JS in browsers |
+| `flask.escape()`, `html.escape()`, `cgi.escape()` applied to user input before render | **EXCLUDE** — properly escaped |
+| `Markup(user_input)` or `mark_safe(user_input)` or `| safe` on untrusted data | **KEEP** — explicitly bypasses escaping |
+| `render_template_string(user_input)` where user controls the template | **KEEP** — SSTI → maps to `rce`, not `xss` |
+| `response.write(user_input)` with Content-Type: text/html and no escaping | **KEEP** — reflected XSS |
+| Stored user content rendered via `{{ content | safe }}` in template | **KEEP** — stored XSS |
+
+**Self-XSS / non-auto-triggering XSS**: **EXCLUDE** payloads that only trigger when the victim manually executes them (browser console paste, about:blank eval). Only report XSS that fires automatically on normal page navigation or normal page load.
+
+**Evidence required**: Point to the exact line where user input is rendered into HTML context without escaping. Must be server-side rendering, not client-side only. Include the Content-Type and template context.
+
 26. **Severity inflation**: A severity label must be calibrated against attack prerequisites. The following downgrade rules apply automatically:
     - Finding with `access_level: "local"` → maximum severity is **MEDIUM** (attacker already has local access)
     - `dos` with `access_level: "auth"` → maximum severity is **MEDIUM**

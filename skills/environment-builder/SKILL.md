@@ -207,6 +207,88 @@ Execute loaded sub-modules in order:
 
 ---
 
+## Step 3b: SQL Injection Testing Setup (only when `sql_injection` in `valid_vuln_types`)
+
+When the vulnerability scanner will test for SQL injection, the database must have **realistic schema and seed data** before PoC execution. An empty database makes boolean-based and time-based blind SQLi much harder to distinguish from normal errors.
+
+### 3b-1 — Detect App Schema
+
+First, check if the app creates its own schema:
+```bash
+# Look for migration files or schema creation scripts
+find "$PROJECT_DIR" -name "*.sql" -o -name "migrations/" -o -name "schema.py" \
+    -o -name "models.py" -o -name "init_db*" 2>/dev/null | head -10
+```
+
+- **If migrations exist**: Run them normally (`flask db upgrade`, `alembic upgrade head`, `manage.py migrate`). The app's own schema is always preferred over synthetic seeding.
+- **If no schema exists**: Seed a minimal schema (see §3b-2 below).
+
+### 3b-2 — Minimal Seed Schema (when app provides no schema)
+
+For Postgres/MySQL targets, inject a minimal schema after database readiness:
+
+```sql
+-- Seed for SQLi testing: realistic user + session tables
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    role VARCHAR(50) DEFAULT 'user',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    token VARCHAR(255) UNIQUE,
+    expires_at TIMESTAMP
+);
+
+INSERT INTO users (username, password_hash, email, role) VALUES
+    ('admin', 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3', 'admin@example.com', 'admin'),
+    ('alice', '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824', 'alice@example.com', 'user'),
+    ('bob',   '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08', 'bob@example.com', 'user')
+ON CONFLICT (username) DO NOTHING;
+```
+
+Run via:
+```bash
+# Postgres
+docker exec ${DB_CONTAINER} psql -U postgres -d ${DB_NAME} -f /tmp/seed.sql
+# MySQL
+docker exec ${DB_CONTAINER} mysql -u root -p${DB_PASS} ${DB_NAME} < seed.sql
+```
+
+### 3b-3 — Verify DB is Reachable from App
+
+Before passing control to the vulnerability scanner, confirm the app actively queries the database:
+
+```bash
+# Check DB logs show incoming connections from the app container
+docker logs ${DB_CONTAINER} 2>&1 | tail -20 | grep -i "connection\|query\|accept" || true
+
+# Verify the app returns DB-backed data (not hardcoded or in-memory)
+curl -s "http://localhost:${WEB_PORT}/" | head -5
+```
+
+> **If the app doesn't connect to the DB at all**: Set `NEEDS_SQLITE=true` if it uses an embedded DB, or note in `ENVIRONMENT_SETUP.md` that the DB connection is optional/disabled — this limits SQLi testing scope.
+
+### 3b-4 — Document in ENVIRONMENT_SETUP.md
+
+Add a `## SQL Injection Testing Notes` section to `workspace/ENVIRONMENT_SETUP.md`:
+
+```markdown
+## SQL Injection Testing Notes
+- DB backend: <postgres|mysql|sqlite>
+- Schema source: <app migrations|synthetic seed>
+- Tables available: users, sessions (+ app-specific tables if any)
+- Connection string: postgresql://postgres@localhost:<port>/<db_name>
+- Test credentials: admin / (hash in users table)
+```
+
+---
+
 ## Step 4: Verify
 
 ```bash
