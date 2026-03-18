@@ -151,10 +151,11 @@ For these targets, the pipeline can only find `dos` (algorithmic) or `command_in
 
 ## Vulnerability Types Covered
 
-rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection, xss
+rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection, xss, idor
 
 **Type scope by target type**:
-- `webapp` / `service`: all 8 types
+- `webapp`: all 9 types (idor requires integer-keyed user-owned resources, not UUID-keyed)
+- `service`: all except xss and idor (no HTML rendering, no user-owned resource model)
 - `cli`: rce, arbitrary_file_rw, dos, command_injection
 - `library`: dos, command_injection, insecure_deserialization (only if network-receiving)
 

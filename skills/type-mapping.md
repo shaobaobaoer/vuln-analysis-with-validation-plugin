@@ -1,8 +1,8 @@
 # Vulnerability Type Mapping (Authoritative Source)
 
-All vulnerability findings MUST use one of the 6 supported type keys below. The `type` field is a **machine-readable lowercase key**, NEVER a descriptive English name.
+All vulnerability findings MUST use one of the 9 supported type keys below. The `type` field is a **machine-readable lowercase key**, NEVER a descriptive English name.
 
-## 8 Supported Types
+## 9 Supported Types
 
 | Type Key | Description |
 |----------|-------------|
@@ -14,6 +14,7 @@ All vulnerability findings MUST use one of the 6 supported type keys below. The 
 | `command_injection` | Command Injection |
 | `sql_injection` | SQL Injection |
 | `xss` | Cross-Site Scripting |
+| `idor` | Insecure Direct Object Reference / Broken Access Control |
 
 ## Mapping: Descriptive Names to Type Keys
 
@@ -51,8 +52,14 @@ Cross-Site Scripting, XSS, xss, Reflected XSS, Stored XSS, Persistent XSS, DOM-B
 
 > **XSS Scope Rule**: Only auto-triggering XSS is valid. Self-XSS and non-auto-triggering stored XSS are excluded per filtering-rules.md rule #28. Reflected XSS that fires on normal navigation and stored XSS that auto-executes are VALID findings.
 
+### MAP to `idor`
+
+Insecure Direct Object Reference, IDOR, idor, Broken Access Control, Horizontal Privilege Escalation, Missing Authorization Check, Missing Ownership Verification, Unauthorized Resource Access, Cross-User Data Access, Object-Level Authorization Bypass, BOLA (Broken Object Level Authorization), Forced Browsing (user-owned resources), Access Control Bypass (horizontal)
+
+> **IDOR Scope Rule**: Only horizontal privilege escalation (user A accessing user B's resources) or complete missing authentication on user-specific endpoints. UUID-based IDs are assumed unguessable (Precedent #2 — exclude). Admin-only resources are intentional (not IDOR). MUST have evidence the access control is absent (not just a theoretical missing check).
+
 ## EXCLUDE (Not Supported)
 
-XXE (map to `arbitrary_file_rw` if file read occurs), Authentication Bypass, Broken Access Control, Information Disclosure, Hardcoded Credentials, Weak Cryptography, IDOR, Log Spoofing, arbitrary_plugin_loading, credential_exposure_via_environment, insecure_temp_file, JWT Signature Not Verified, Default No-Auth Configuration, Self-XSS, CSV Injection, HTML Injection (no script execution)
+XXE (map to `arbitrary_file_rw` if file read occurs), Vertical Privilege Escalation / Admin Bypass (not IDOR — different attack), Information Disclosure, Hardcoded Credentials, Weak Cryptography, Log Spoofing, arbitrary_plugin_loading, credential_exposure_via_environment, insecure_temp_file, JWT Signature Not Verified, Default No-Auth Configuration, Self-XSS, CSV Injection, HTML Injection (no script execution), IDOR via UUID guessing (assumed unguessable)
 
-**Rule**: If a finding cannot be mapped to one of the 6 types, it MUST be excluded. NEVER invent new type names.
+**Rule**: If a finding cannot be mapped to one of the 9 types, it MUST be excluded. NEVER invent new type names.

@@ -70,7 +70,7 @@ Read `workspace/target.json`. Determine `project_type` and `valid_vuln_types`.
 Does the original source code contain HTTP route definitions
 (@app.route, urlpatterns, router.get, @Controller, app.listen)?
   YES → project_type = "webapp" or "service"
-        valid_vuln_types = all 8 types
+        valid_vuln_types = all 9 types (webapp) or all except "xss" and "idor" (service)
   NO  → Does it have a network daemon/server (grpc.server, socket.bind in main loop)?
           YES → project_type = "service"
                 valid_vuln_types = ["rce","insecure_deserialization","arbitrary_file_rw","dos","command_injection","sql_injection"]
@@ -82,7 +82,7 @@ Does the original source code contain HTTP route definitions
                         network_exploitable = false
 ```
 
-> **Note on sql_injection and xss scoping**: `sql_injection` is valid for webapp/service targets that use a backend database ORM or raw SQL queries in their HTTP handlers. `xss` is valid ONLY for webapp targets that render HTML from user-controlled data — not APIs that return JSON. If the target only returns JSON, XSS is not applicable.
+> **Note on sql_injection, xss, and idor scoping**: `sql_injection` is valid for webapp/service targets that use a backend database ORM or raw SQL queries in their HTTP handlers. `xss` is valid ONLY for webapp targets that render HTML from user-controlled data — not APIs that return JSON. `idor` is valid ONLY for webapp targets with user-owned resources accessed by sequential/predictable IDs — UUID-keyed resources are excluded (Precedent #2).
 
 *`insecure_deserialization` valid for library ONLY if the library itself receives serialized bytes over a network socket (rare). Not valid for libraries that only `pickle.load()` local files.
 

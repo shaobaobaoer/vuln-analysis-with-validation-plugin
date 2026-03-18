@@ -26,7 +26,7 @@ Perform a security-focused code review to identify **HIGH-CONFIDENCE** security 
 
 ### Supported Vulnerability Types (Pipeline Output)
 
-Findings MUST map to one of these 6 types. Findings that cannot be mapped are excluded.
+Findings MUST map to one of these 9 types. Findings that cannot be mapped are excluded.
 
 | Type Key | What to Look For |
 |----------|-----------------|
@@ -38,10 +38,13 @@ Findings MUST map to one of these 6 types. Findings that cannot be mapped are ex
 | `dos` | ReDoS, XML bomb, hash collision, deeply nested JSON/XML, single-request algorithmic complexity |
 | `sql_injection` | `cursor.execute(f"...")`, `"SELECT ... " + user_input`, ORM `.raw(f"...")`, `.execute(text(f"..."))`, `Model.objects.raw(f"...")` |
 | `xss` | User-controlled data rendered in HTML without escaping: `render_template_string(user_input)`, `innerHTML = user_data`, `Markup(user_input)`, `mark_safe(user_input)`, `dangerouslySetInnerHTML` |
+| `idor` | Missing ownership verification on resource access: `Object.query.get(id)` without `user == current_user`, `find_by_id(params[:id])` without authorization check, `/api/users/{id}` returning 200 for any authenticated user regardless of ownership |
 
 **sql_injection scope**: Only for webapp/service targets with a database backend accessed via HTTP endpoints. Not valid for library/CLI targets.
 
 **xss scope**: Only auto-triggering XSS. Reflected XSS that executes on normal GET navigation, or stored XSS that fires on page load. Self-XSS and non-auto-triggering XSS are EXCLUDED.
+
+**idor scope**: Only webapp/service targets. Must have evidence that the endpoint returns another user's data when accessed with a different user's credentials. Missing authorization check on a reachable endpoint is NOT sufficient — there must be evidence the access control is actually absent (no `.filter(user=request.user)`, no permission decorator, no ownership comparison). Do NOT report IDOR for admin-only endpoints (those are intentional) or UUID-based IDs (assumed unguessable per Precedent #2).
 
 ### Additional Categories (for context, but findings must map to the 8 types above)
 

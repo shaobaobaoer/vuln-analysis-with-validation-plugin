@@ -74,8 +74,8 @@ Based on target type, set `valid_vuln_types[]` — the pipeline will ONLY analyz
 
 | Target Type | Valid Vulnerability Types | Rationale |
 |-------------|--------------------------|-----------|
-| `webapp` | `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss` | All types in scope — attacker can reach code via HTTP |
-| `service` | `rce`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection` | No HTTP rendering → no XSS; SSRF only if HTTP client; SQL injection if DB-backed |
+| `webapp` | `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss`, `idor` | All types in scope — attacker can reach code via HTTP; idor valid only if integer-keyed user-owned resources exist |
+| `service` | `rce`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection` | No HTTP rendering → no XSS, no idor; SSRF only if HTTP client; SQL injection if DB-backed |
 | `cli` | `rce`, `arbitrary_file_rw`, `dos`, `command_injection` | Attacker controls CLI args/input files; SSRF/deser/SQLi/XSS rarely valid |
 | `library` | `dos`, `command_injection`, `insecure_deserialization`* | **Severely restricted** — see §Library Target Rules below |
 
@@ -153,7 +153,7 @@ After classifying the project type, enumerate all public entry points. These def
   "project_name": "example-project",
   "project_type": "webapp|service|cli|library",
   "network_exploitable": true,
-  "valid_vuln_types": ["rce", "ssrf", "insecure_deserialization", "arbitrary_file_rw", "dos", "command_injection", "sql_injection", "xss"],
+  "valid_vuln_types": ["rce", "ssrf", "insecure_deserialization", "arbitrary_file_rw", "dos", "command_injection", "sql_injection", "xss", "idor"],
   "version": "1.2.3",
   "language": "python",
   "framework": "flask",

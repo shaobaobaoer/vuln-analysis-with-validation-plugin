@@ -161,6 +161,7 @@ Scan the PoC script source code for forbidden patterns. If any match, the result
 | DoS | Response time >= 10x baseline | Compare `attack_time / baseline_time >= 10` |
 | SQL Injection | SQL error in HTTP response OR time >= 4× baseline OR boolean diff >= 50 bytes | `docker exec <container> curl -sf "http://localhost:<port>/endpoint?id=%27" \| grep -iE "sql syntax\|ORA-\|syntax error"` |
 | XSS | Unique marker present unescaped in HTTP response body | `docker exec <container> curl -sf "http://localhost:<port>/endpoint?q=<payload>" \| grep "<MARKER>"` |
+| IDOR | HTTP 200 with target user's data returned via different user's credentials | `docker exec <container> curl -sf -H "Authorization: Bearer ${TOKEN1}" "http://localhost:<port>/api/users/${USER2_ID}" \| grep "${USER2_USERNAME}"` |
 
 ### Step 5: Output Result
 

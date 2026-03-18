@@ -43,7 +43,7 @@ The following fallback strategies are **STRICTLY FORBIDDEN**. If Docker is unava
 
 ## Supported Vulnerability Types
 
-The pipeline supports these 8 vulnerability types. Any finding outside this list MUST be mapped to one of these or excluded:
+The pipeline supports these 9 vulnerability types. Any finding outside this list MUST be mapped to one of these or excluded:
 
 | Type Key | Description | Valid For |
 |----------|-------------|-----------|
@@ -55,8 +55,9 @@ The pipeline supports these 8 vulnerability types. Any finding outside this list
 | `command_injection` | Command Injection | all types |
 | `sql_injection` | SQL Injection | webapp, service |
 | `xss` | Cross-Site Scripting | webapp only |
+| `idor` | Insecure Direct Object Reference / Broken Access Control | webapp only |
 
-**Mapping rules**: "Path Traversal" → `arbitrary_file_rw`. "Code Injection" / "Template Injection" → `rce`. "SQLi" → `sql_injection`. "Reflected/Stored XSS" → `xss` (auto-triggering only). "Information Disclosure" is NOT a supported type — exclude it unless it maps to one of the 8.
+**Mapping rules**: "Path Traversal" → `arbitrary_file_rw`. "Code Injection" / "Template Injection" → `rce`. "SQLi" → `sql_injection`. "Reflected/Stored XSS" → `xss` (auto-triggering only). "Broken Access Control" / "BOLA" / "Horizontal Privilege Escalation" → `idor` (integer IDs only, not UUIDs). "Information Disclosure" is NOT a supported type — exclude it unless it maps to one of the 9.
 
 **XSS scope rule**: Only auto-triggering XSS (reflected on navigation, stored that fires on page load). Self-XSS and non-auto-triggering XSS remain EXCLUDED.
 

