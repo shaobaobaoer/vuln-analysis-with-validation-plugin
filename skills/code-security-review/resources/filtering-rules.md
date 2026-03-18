@@ -219,6 +219,45 @@ A finding is **NOT IDOR** unless there is direct evidence that a user-controlled
 
 **Evidence required**: Identify the exact ORM/query call that retrieves the resource using a user-controlled ID, AND confirm the absence of an ownership filter or permission check before the resource is returned. Quote both the vulnerable line and confirm there is no `@permission_required` / `.filter(user=current_user)` in scope.
 
+31. **JNDI Injection Quality Gate** — Java targets only (apply to ALL `jndi_injection` candidates):
+
+A finding is **NOT JNDI Injection** unless user-controlled input flows into a **Log4j logger call** (or equivalent JNDI-resolving API) without sanitization. Auto-exclude if:
+
+| Situation | Decision |
+|-----------|----------|
+| Target language is NOT Java | **EXCLUDE** — JNDI injection is Java-only |
+| Log4j version ≥ 2.17.0 (patched Log4Shell) with default `log4j2.formatMsgNoLookups=true` | **EXCLUDE** — lookup feature disabled by default in patched versions |
+| User input is sanitized before logger call: `input.replace("${", "")` or similar | **EXCLUDE** — JNDI lookup sequences stripped |
+| Logger call uses `%s` parameter substitution without message formatting: `logger.info("{}", userInput)` with Log4j 2.17+ | **EXCLUDE** — parameter substitution does not trigger JNDI lookups |
+| JNDI is called only with hardcoded strings (no user-controlled input in the lookup URL) | **EXCLUDE** — no injection vector |
+| User input reaches `logger.info(userInput)` or `logger.error(userInput)` with unpatched Log4j 2 (< 2.17.0) | **KEEP** — classic Log4Shell path |
+| User input reaches `LogManager.getLogger().log(level, userInput)` with unpatched Log4j 2 | **KEEP** — JNDI lookup via message format |
+| Any HTTP request header (User-Agent, X-Forwarded-For, X-Api-Version) flows directly into a Log4j logger | **KEEP** — most common Log4Shell exploitation vector |
+
+**Evidence required**: Identify the exact logger call site, confirm Log4j version (from `pom.xml` or `build.gradle`), and trace the user-controlled input path from HTTP handler to logger. CVSS 10.0 if unauthenticated; cite CVE-2021-44228 (Log4Shell) as the canonical disclosure.
+
+**Scope**: `jndi_injection` findings are ONLY valid for Java `webapp` and `service` targets. All other languages → auto-exclude.
+
+32. **Prototype Pollution Quality Gate** — JavaScript/TypeScript targets only (apply to ALL `prototype_pollution` candidates):
+
+A finding is **NOT Prototype Pollution** unless untrusted input can set properties on `Object.prototype` (or `Array.prototype`) through an **unsafe recursive merge, deep clone, or property assignment** that does not block `__proto__`, `constructor`, or `prototype` keys.
+
+| Situation | Decision |
+|-----------|----------|
+| Target language is NOT JavaScript or TypeScript | **EXCLUDE** — PP is JS/TS-only |
+| Merge/clone function explicitly checks: `if (key === '__proto__')` or `hasOwnProperty` guard | **EXCLUDE** — protected against PP |
+| lodash ≥ 4.17.21, merge-deep ≥ 3.0.3, or other patched version used | **EXCLUDE** — library patched for PP |
+| `Object.assign({}, input)` (shallow merge only) | **EXCLUDE** — shallow merge cannot pollute `__proto__` |
+| `JSON.parse(input)` followed by property access — no deep merge | **EXCLUDE** — JSON.parse does not restore `__proto__` chain |
+| Deep merge of user-controlled JSON without `__proto__` key filtering into a mutable object | **KEEP** — classic PP vector |
+| `qs.parse(req.query, { allowDots: true, allowPrototypes: true })` or similar opt-in | **KEEP** — explicit opt-in to unsafe behavior |
+| Affected object is accessed by a template engine with known PP gadgets (EJS, Pug, Handlebars) | **KEEP** as RCE if gadget chain confirmed |
+| Pollution only raises `isAdmin` flag or similar — no RCE gadget found | **KEEP** as `prototype_pollution` (privesc, not RCE) |
+
+**Evidence required**: Identify (a) the unsafe merge/clone function, (b) the user-controlled input that reaches it, (c) the property (usually `__proto__` or `constructor.prototype`) that gets polluted, and (d) optionally the downstream gadget chain (EJS `outputFunctionName`, Pug `block`, etc.) if RCE is claimed. Distinguish CVSS 8.1 (RCE via gadget) from 6.5 (privesc only).
+
+**Scope**: `prototype_pollution` findings are ONLY valid for JavaScript/TypeScript targets. All other languages → auto-exclude.
+
 26. **Severity inflation**: A severity label must be calibrated against attack prerequisites. The following downgrade rules apply automatically:
     - Finding with `access_level: "local"` → maximum severity is **MEDIUM** (attacker already has local access)
     - `dos` with `access_level: "auth"` → maximum severity is **MEDIUM**

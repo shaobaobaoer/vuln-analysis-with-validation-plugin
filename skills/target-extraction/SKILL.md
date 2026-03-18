@@ -74,10 +74,24 @@ Based on target type, set `valid_vuln_types[]` — the pipeline will ONLY analyz
 
 | Target Type | Valid Vulnerability Types | Rationale |
 |-------------|--------------------------|-----------|
-| `webapp` | `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss`, `idor` | All types in scope — attacker can reach code via HTTP; idor valid only if integer-keyed user-owned resources exist |
-| `service` | `rce`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection` | No HTTP rendering → no XSS, no idor; SSRF only if HTTP client; SQL injection if DB-backed |
-| `cli` | `rce`, `arbitrary_file_rw`, `dos`, `command_injection` | Attacker controls CLI args/input files; SSRF/deser/SQLi/XSS rarely valid |
+| `webapp` | `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss`, `idor` | All types in scope; idor valid only if integer-keyed user-owned resources exist |
+| `service` | `rce`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection` | No HTTP rendering → no XSS, no idor; SSRF only if HTTP client |
+| `cli` | `rce`, `arbitrary_file_rw`, `dos`, `command_injection` | Attacker controls CLI args/input files |
 | `library` | `dos`, `command_injection`, `insecure_deserialization`* | **Severely restricted** — see §Library Target Rules below |
+
+**Language-specific type injection (MANDATORY — apply after table above)**:
+
+After determining the base `valid_vuln_types` from the table, check `language` and **add** the language-specific type if applicable:
+
+| Language | Add to `valid_vuln_types` | Condition |
+|----------|--------------------------|-----------|
+| `java` | `jndi_injection` | Always add for Java `webapp` and `service` targets |
+| `javascript` or `typescript` | `prototype_pollution` | Add for `webapp` and `service`; also `library` if it exports deep-merge functions |
+| Python, Go, Ruby, PHP, Rust, other | — | Do NOT add language-specific types; base list only |
+
+**Example**: Java webapp → `["rce", "ssrf", "insecure_deserialization", "arbitrary_file_rw", "dos", "command_injection", "sql_injection", "xss", "idor", "jndi_injection"]`
+
+**Example**: TypeScript webapp → `["rce", "ssrf", "insecure_deserialization", "arbitrary_file_rw", "dos", "command_injection", "sql_injection", "xss", "idor", "prototype_pollution"]`
 
 ### Library Target Rules
 

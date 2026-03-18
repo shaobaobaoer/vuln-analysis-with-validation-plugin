@@ -3,8 +3,9 @@ name: code-security-review
 description: >
   AI-driven code security review with mandatory three-phase process: (1) Security Audit to produce raw findings,
   (2) False Positive Filtering with hard exclusions + AI-based confidence scoring, (3) Report with only high-confidence
-  findings. Integrates regex-based auto-exclusion, 28 hard exclusion rules, 22 precedents, and 1-10 confidence scoring.
-  Supports all programming languages. Derived from anthropics/claude-code-security-review.
+  findings. Integrates regex-based auto-exclusion, 30 hard exclusion rules (incl. language-gated JNDI and PP gates),
+  22 precedents, and 1-10 confidence scoring. Supports all programming languages; language-specific types (jndi_injection
+  for Java, prototype_pollution for JS/TS) enforced via quality gates. Derived from anthropics/claude-code-security-review.
 origin: vuln-analysis
 ---
 
@@ -71,6 +72,8 @@ Examine code for these security categories:
 
 **Injection & Code Execution:**
 - RCE via deserialization, pickle injection, YAML deserialization, eval injection, XSS
+- **JNDI Injection** (Java only): User input flowing into Log4j logger calls (`logger.info(userInput)`) with Log4j 2 < 2.17.0 — triggers JNDI LDAP/RMI lookups → remote class loading → RCE. Map to `jndi_injection`. Search for `logger.info`, `logger.error`, `logger.warn`, `logger.debug` receiving HTTP header values or request parameters directly. Reference CVE-2021-44228 (Log4Shell).
+- **Prototype Pollution** (JS/TS only): Untrusted input reaching unsafe deep merge/clone without `__proto__`/`constructor` key filtering (`_.merge`, `jQuery.extend(true,...)`, custom recursive merge). Check for downstream RCE gadgets in EJS (`outputFunctionName`), Pug (`block`), Handlebars. Map to `prototype_pollution`.
 
 **Data Exposure:**
 - Sensitive data logging, PII violations, API leakage, debug info exposure
@@ -114,7 +117,7 @@ Apply regex-based patterns from `resources/hard-exclusion-patterns.md`:
 - Non-C/C++ files → Memory safety findings excluded
 - `.html` files → SSRF findings excluded
 
-### Step 2b — AI Filtering Pass (28 Hard Exclusions)
+### Step 2b — AI Filtering Pass (30 Hard Exclusions)
 
 Automatically exclude findings matching:
 
@@ -175,6 +178,28 @@ A finding is NOT IDOR unless a user-controlled ID retrieves another user's resou
 
 **Evidence required**: Quote the exact ORM/query line using the user-supplied ID AND confirm no ownership check exists in that scope.
 
+### Step 2c-iv — JNDI Injection Quality Gate (Java targets only — apply to ALL `jndi_injection` candidates)
+
+**Immediate auto-exclude** if target language is NOT Java. For Java targets, see `resources/filtering-rules.md §JNDI Injection Quality Gate` (rule #31).
+
+- Log4j version ≥ 2.17.0 → EXCLUDE (patched, lookup disabled by default)
+- User input sanitized before logger call → EXCLUDE
+- Shallow parameter substitution (`logger.info("{}", val)`) with patched Log4j → EXCLUDE
+- User input flows directly into `logger.info(userInput)` / HTTP header into logger with Log4j 2 < 2.17.0 → **KEEP** (CVSS 10.0, cite CVE-2021-44228)
+
+**Evidence required**: Confirm Log4j version from `pom.xml`/`build.gradle`, trace HTTP input → logger call site, confirm no lookup-disabling configuration.
+
+### Step 2c-v — Prototype Pollution Quality Gate (JS/TS targets only — apply to ALL `prototype_pollution` candidates)
+
+**Immediate auto-exclude** if target language is NOT JavaScript or TypeScript. For JS/TS targets, see `resources/filtering-rules.md §Prototype Pollution Quality Gate` (rule #32).
+
+- Protected merge with `__proto__` key check → EXCLUDE
+- Patched library version (lodash ≥ 4.17.21, etc.) → EXCLUDE
+- Shallow `Object.assign()` → EXCLUDE (cannot pollute prototype chain)
+- Unsafe deep merge of user-controlled JSON → **KEEP**; escalate to RCE if EJS/Pug/Handlebars gadget chain confirmed (CVSS 8.1), otherwise KEEP as privesc (CVSS 6.5)
+
+**Evidence required**: Identify unsafe merge function, user-controlled input path, polluted property, and downstream gadget (if RCE claimed).
+
 ### Step 2c — Intended Functionality Check
 
 Assess whether the exploitable behavior **exceeds the designed purpose** of the API. If the API is designed to perform the "dangerous" operation (e.g., `download_from_url()` fetching arbitrary URLs), the finding is by design — not a vulnerability. Apply rules from `resources/filtering-rules.md §Intended Functionality Exclusion`.
@@ -188,7 +213,7 @@ Apply specific guidance:
 3. **Audit logs**: Not a critical security feature.
 4. **Environment variables/CLI flags**: Trusted values. Controlling env vars = invalid attack.
 5. **Resource management**: Leaks are not vulnerabilities.
-6. **Low-impact web vulns**: Tabnabbing, XS-Leaks, prototype pollution, open redirects — exclude unless extremely high confidence.
+6. **Low-impact web vulns**: Tabnabbing, XS-Leaks, open redirects — exclude unless extremely high confidence. **Prototype pollution exception**: exclude ONLY if it is a purely theoretical pollution with no downstream impact. If a confirmed gadget chain (EJS `outputFunctionName`, Pug `block`, Handlebars) escalates PP to RCE, treat as HIGH severity and KEEP — do NOT downgrade to "low-impact".
 7. **Outdated libraries**: Managed separately.
 8. **React/Angular XSS**: Secure by default. Only report with `dangerouslySetInnerHTML` or similar.
 9. **CI/CD workflows**: Rarely exploitable in practice. Need concrete attack path.
