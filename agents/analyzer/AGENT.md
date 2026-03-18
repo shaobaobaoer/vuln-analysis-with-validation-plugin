@@ -183,7 +183,25 @@ For each finding that survived Phase 3c filtering, match it against the disclosu
 - If no match: set `known_disclosures: []` — NEVER omit this key
 - If the matched disclosure has `status: fixed` AND the scanned version >= `fixed_version`: note this in the finding description and reduce confidence by 1 (the vulnerability may already be patched in production)
 
-**Phase 3d.5 — Builder-Generated Entry Point Exclusion** (run BEFORE dedup):
+**Phase 3d.5 — Library Target Quality Gate + Builder Entry Point Exclusion** (run BEFORE dedup):
+
+**A. Library Target Access Level Rule** (MANDATORY):
+
+First, determine if the target is a **pure library** (a Python/JS/Go/etc. package that ships no HTTP server of its own). A library target is identified by:
+- No HTTP server framework in the source code (`flask`, `fastapi`, `aiohttp`, `django`, `express`, `gin`, etc.)
+- No route definitions (`@app.route`, `router.get()`, `app.listen()`, etc.)
+- Source code contains only functions/classes, not a runnable server application
+
+If the target is a pure library, apply these rules to **every finding**:
+- `entry_point.type` MUST be `"library_api"` — NEVER `"webapp_endpoint"`
+- `entry_point.path` MUST be the public API call: `lib.func()`, `lib.Class()`, `lib.Class.method()`
+- `entry_point.access_level` MUST be `"local"` — a library function can only be called by code that runs on the host, not directly over the network
+- **EXCLUDE any finding** where `entry_point.path` points to an HTTP endpoint — those endpoints were created by the builder, not the original library
+- **EXCLUDE any finding** whose attack scenario requires the attacker to make an HTTP request to a Flask/FastAPI route created by the builder
+
+> **Root cause of 30%+ invalid "remote" findings**: Builder creates Flask servers for library targets (`/load_pickle`, `/eval`, `/file/read` endpoints). Analyzer then reports these as `access_level: "none"` remote vulnerabilities. All such findings are INVALID — exploit the builder's manufactured attack surface, not the original library. Found in: `requests`, `catboost`, `xgboost`, `chainer`, `pandas`, `mxnet`, `botocore`, `transformers`, `sqlalchemy`, `composio`.
+
+**B. Builder-Generated Entry Point Exclusion** (applies to ALL target types):
 
 Before deduplication, scan ALL findings' `entry_point.path` values for builder-generated files:
 - **FORBIDDEN paths**: Any `entry_point.path` pointing to `workspace/`, `test_server.py`, `harness.py`, `app.py` (builder-written), `server.py` (builder-written) — these are builder-generated and MUST be excluded

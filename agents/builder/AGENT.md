@@ -118,14 +118,45 @@ PYEOF
 
 This is identical to writing the same code in a standalone `vuln_test_server.py`. **Do not add `exec()`, `eval()`, `pickle.loads()`, or `subprocess.run(shell=True)` endpoints in any inline server, regardless of how they are written into the container.**
 
-### Library Targets: No HTTP Wrapper for Unexposed Functions
+### Library Targets: ZERO HTTP Server — Absolute Rule
 
-For **library-type targets** (Python packages with no built-in HTTP server), the correct test harness exposes only what the library's public API already does. Do NOT create HTTP endpoints that:
-- Accept pickle/serialized data and call `pickle.load()` on it — unless the library itself does this in a public function
-- Accept arbitrary code strings and execute them — unless the library itself has this feature
-- Accept file paths and read files — unless the library itself has this feature
+> **This is the most commonly violated rule in 175 pipeline runs.** Builder-created HTTP servers for library targets are the root cause of fabricated "remote" vulnerabilities that are actually just local library API calls.
 
-If the library has no HTTP server, the test harness should be minimal: install the library and provide a way to invoke its public functions (e.g., a thin CLI wrapper or a Python test script). Avoid creating a Flask/FastAPI server for pure library targets unless the library itself is an HTTP framework.
+**Definition**: A library target is a Python package (or any language library) that does NOT ship its own HTTP server as part of its public API. Examples: `pandas`, `requests`, `catboost`, `xgboost`, `chainer`, `transformers`, `tokenizers`, `scikit-learn`, `numpy`, `torch`, etc.
+
+**For library targets, the Dockerfile MUST:**
+- Install the library and its dependencies
+- Verify the library imports correctly (HEALTHCHECK: `python3 -c "import <lib>"`)
+- Provide NO HTTP server of any kind — not Flask, not FastAPI, not aiohttp, not any other
+
+**FORBIDDEN for library targets:**
+- Any `flask` or `fastapi` or `aiohttp` install in the Dockerfile
+- Any `@app.route`, `@router.get`, `app.post()` pattern in any file in the container
+- Any `RUN cat > server.py << 'PYEOF'` heredoc that creates an HTTP server
+- Endpoint wrappers like `/load_pickle`, `/file/read`, `/api/model/save`, `/eval`, `/deserialize`
+
+**Why this matters**: When a builder creates a `/load_pickle` endpoint for a library that normally requires `with open(path) as f: pickle.load(f)`, it transforms a local-access vulnerability into a network-accessible one. The resulting finding is INVALID — it exploits the builder's code, not the original library.
+
+**Observed examples of this violation:**
+- `requests`: builder added `/fetch`, `/deserialize` endpoints → `requests` has NO HTTP server
+- `catboost`: builder added `/file/read`, `/model/save` endpoints → catboost has NO HTTP server
+- `xgboost`: builder added `/api/model/save`, `/api/model/dump` endpoints → xgboost has NO HTTP server
+- `chainer`: builder added `/load_pickle`, `/load_npz` endpoints → chainer has NO HTTP server
+- `pandas`: builder added `/eval`, `/read_pickle`, `/read_csv` endpoints → pandas has NO HTTP server
+
+**What to do instead**: For library targets, the PoC scripts will directly import the library and call public API functions. The builder's ONLY job is to make `import <library>` work inside Docker. No server needed.
+
+```dockerfile
+# CORRECT Dockerfile for library target (e.g., pandas)
+FROM python:3.12-slim
+RUN pip install uv
+WORKDIR /app
+COPY . /app
+RUN uv pip install --system -e .
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+  CMD python3 -c "import pandas; print('ok')" || exit 1
+# NO FLASK SERVER. NO ROUTES. NO HTTP ENDPOINTS.
+```
 
 ---
 
