@@ -407,7 +407,7 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
 | Key | Type | Description |
 |-----|------|-------------|
 | `id` | string | Unique identifier (VULN-001, VULN-002, ...) |
-| `type` | string | One of the 6 supported types (exact lowercase key) |
+| `type` | string | One of the 9 supported types (exact lowercase key) |
 | `title` | string | Short descriptive title |
 | `severity` | string | `critical`, `high`, `medium`, or `low` |
 | `confidence` | integer | 7-10 (findings < 7 are excluded) |

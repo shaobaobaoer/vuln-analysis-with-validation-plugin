@@ -104,7 +104,7 @@ The pipeline supports these 9 vulnerability types. Any finding outside this list
 - **Delegate to**: `analyzer` agent — **USE `Agent` TOOL NOW. Do NOT scan source code or write vulnerabilities.json yourself.**
 - Input: `workspace/target.json` (MUST include `entry_points[]`), source code
 - Output: `workspace/vulnerabilities.json`
-- The analyzer MUST only output vulnerabilities with types from the 6 supported types listed above
+- The analyzer MUST only output vulnerabilities with types from the 9 supported types listed above
 - **Every finding MUST include `entry_point` with reachability assessment** — findings with `not_reachable` are excluded
 - **Abort pipeline if this fails**
 
@@ -415,7 +415,7 @@ After each step completes (status set to `completed` by the sub-agent), the orch
 | 1 - Target Extraction | `workspace/target.json` | File exists, valid JSON, contains required keys: `project_name`, `language`, `framework`, `version`, `entry_points`. **`entry_points` array must be non-empty** — these define the attack surface. **`version` is mandatory** — the disclosure lookup in Step 4 uses it to determine whether known CVEs apply to the scanned version |
 | 2 - Environment Setup | `workspace/Dockerfile` | File exists; Docker container is running and responsive (health check); **`ENVIRONMENT_SETUP.md` exists** (mandatory documentation); **Dockerfile uses `uv` for Python deps** (NEVER pip); **Docker resources are labeled** with `vuln-analysis.pipeline-id` |
 | 3 - Docker Readiness Gate | Running container | `docker ps` shows container up; `curl` to main endpoint returns HTTP 200 (or CLI runs); health check passes. If fail → return to Step 2 |
-| 4 - Vulnerability Analysis | `workspace/vulnerabilities.json` | File exists, valid JSON, contains `vulnerabilities` array, each entry has `id`, `type`, `severity`, `confidence`, `entry_point`. **Type must be one of the 6 supported types** (rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection). **No SQL injection, XXE, auth bypass, or other unsupported types.** **Every finding must have `entry_point.reachability` = `reachable` or `conditional`.** **Confidence >= 7.** Abort if fails |
+| 4 - Vulnerability Analysis | `workspace/vulnerabilities.json` | File exists, valid JSON, contains `vulnerabilities` array, each entry has `id`, `type`, `severity`, `confidence`, `entry_point`. **Type must be one of the 9 supported types** (rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection, xss, idor). **No XXE, auth bypass, or other unsupported types.** **Every finding must have `entry_point.reachability` = `reachable` or `conditional`.** **Confidence >= 7.** Abort if fails |
 | 5 - PoC Generation | `workspace/poc_manifest.json` | File exists, valid JSON, at least one PoC entry referencing an existing script file. **Each script follows naming convention `poc_<type>_<NNN>.py`** (e.g., `poc_rce_001.py`). **Each script accepts `--target` and `--timeout` CLI args.** |
 | 6 - Environment Init | Monitoring infrastructure | TCP listeners active, trigger binary deployed, inotifywait running (as applicable) |
 | 7 - Reproduction | `workspace/results.json` | File exists, valid JSON, each entry has `vuln_id`, `status`, and `validation_result` |
