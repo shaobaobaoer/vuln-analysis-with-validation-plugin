@@ -11,6 +11,8 @@ import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+from ._risk import compute_risk
+
 
 class MarkdownReporter:
     """Generates a Markdown vulnerability analysis report.
@@ -88,7 +90,7 @@ class MarkdownReporter:
             1 for r in self.results if r.get("validation", {}).get("status") == "ERROR"
         )
 
-        severity = self._overall_severity(confirmed, partial, total)
+        severity = compute_risk(confirmed, partial, total)
 
         lines = [
             "## Executive Summary",
@@ -231,24 +233,6 @@ class MarkdownReporter:
                 "for authorized security testing purposes only.*",
             ]
         )
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _overall_severity(confirmed: int, partial: int, total: int) -> str:
-        if total == 0:
-            return "UNKNOWN"
-        ratio = (confirmed + partial * 0.5) / total
-        if ratio >= 0.5:
-            return "CRITICAL"
-        if ratio >= 0.25:
-            return "HIGH"
-        if confirmed > 0 or partial > 0:
-            return "MEDIUM"
-        return "LOW"
-
 
 # ------------------------------------------------------------------
 # Module-level convenience function

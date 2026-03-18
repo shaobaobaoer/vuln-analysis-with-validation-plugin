@@ -12,6 +12,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from ._risk import compute_risk
+
 
 def generate_summary(
     target: dict[str, Any],
@@ -72,7 +74,7 @@ def generate_summary(
         )
 
     total = len(results)
-    overall_risk = _compute_risk(confirmed, partial, total)
+    overall_risk = compute_risk(confirmed, partial, total)
 
     summary: dict[str, Any] = {
         "metadata": {
@@ -112,20 +114,3 @@ def write_summary(summary: dict[str, Any], output_path: str) -> str:
     return str(path.resolve())
 
 
-# ------------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------------
-
-
-def _compute_risk(confirmed: int, partial: int, total: int) -> str:
-    """Compute an overall risk level string from validation counts."""
-    if total == 0:
-        return "UNKNOWN"
-    ratio = (confirmed + partial * 0.5) / total
-    if ratio >= 0.5:
-        return "CRITICAL"
-    if ratio >= 0.25:
-        return "HIGH"
-    if confirmed > 0 or partial > 0:
-        return "MEDIUM"
-    return "LOW"

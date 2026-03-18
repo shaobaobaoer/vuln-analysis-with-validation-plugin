@@ -53,16 +53,6 @@ class PipelineStage(str, Enum):
     TEARDOWN = "teardown"
     COMPLETED = "completed"
 
-    @property
-    def next_stage(self) -> Optional[PipelineStage]:
-        """Return the next stage in sequence, or None if at the end."""
-        members = list(PipelineStage)
-        idx = members.index(self)
-        if idx + 1 < len(members):
-            return members[idx + 1]
-        return None
-
-
 @dataclass
 class PipelineState:
     """Serialisable pipeline execution state for resume / audit."""
@@ -156,6 +146,7 @@ class VulnPipeline:
         self.docker = DockerManager()
         self.state = PipelineState.load(config.state_file)
         self._container: Optional[ContainerInfo] = None
+        self._runner: Optional[PoCRunner] = None
         self._execution_results: list[ExecutionResult] = []
         self._validated_results: list[dict[str, Any]] = []
 
@@ -300,8 +291,8 @@ class VulnPipeline:
 
     def _stage_discover_pocs(self) -> None:
         """Stage 4: Discover PoC scripts from the scripts directory."""
-        runner = PoCRunner(self.config.scripts_dir, max_workers=self.config.max_workers)
-        scripts = runner.discover()
+        self._runner = PoCRunner(self.config.scripts_dir, max_workers=self.config.max_workers)
+        scripts = self._runner.discover()
         if not scripts:
             raise RuntimeError(
                 f"No PoC scripts found in {self.config.scripts_dir}"
@@ -310,9 +301,13 @@ class VulnPipeline:
 
     def _stage_execute_pocs(self) -> None:
         """Stage 5: Execute all PoC scripts against the target."""
-        runner = PoCRunner(self.config.scripts_dir, max_workers=self.config.max_workers)
-        runner.discover()
-        self._execution_results = runner.execute(
+        if self._runner is None:
+            # Runner may be None when resuming a pipeline that already completed
+            # the discover stage. Re-discover without raising on empty (discover
+            # already validated that scripts exist).
+            self._runner = PoCRunner(self.config.scripts_dir, max_workers=self.config.max_workers)
+            self._runner.discover()
+        self._execution_results = self._runner.execute(
             target=self.config.target_url,
             timeout=self.config.poc_timeout,
             parallel=self.config.parallel_execution,

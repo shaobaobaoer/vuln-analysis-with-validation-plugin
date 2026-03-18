@@ -3,6 +3,21 @@ PoC execution runner for authorized vulnerability analysis.
 
 Discovers, loads, and executes Proof-of-Concept scripts against
 targets in legitimate pentesting, CTF, and research contexts.
+
+IMPORTANT — Host execution warning
+-----------------------------------
+This module runs PoC scripts as local subprocesses (``python3 script.py``).
+It is intended for use ONLY when the runner itself executes *inside* a
+Docker container (e.g. via ``docker exec``), making the "host" from the
+runner's perspective the container interior, not the analyst's machine.
+
+Do NOT invoke this module directly on the analyst's workstation to run
+exploit code against a Docker-hosted target. The correct workflow is:
+
+    1. Copy PoC scripts into the running container.
+    2. Run ``docker exec <container> python3 /workspace/pocs/poc_rce_001.py``
+
+See ``CLAUDE.md §Safety Invariants`` for the full policy.
 """
 
 from __future__ import annotations

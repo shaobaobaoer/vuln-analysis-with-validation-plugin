@@ -296,15 +296,18 @@ class CommandInjectionValidator(BaseValidator):
 
 # ---------------------------------------------------------------------------
 # Auto-registration
+#
+# Each concrete validator declares its own VULN_TYPE class constant so we
+# can register without constructing a throw-away instance.
 # ---------------------------------------------------------------------------
-_ALL_VALIDATORS: list[type[BaseValidator]] = [
-    RCEValidator,
-    SSRFValidator,
-    InsecureDeserializationValidator,
-    ArbitraryFileRWValidator,
-    DoSValidator,
-    CommandInjectionValidator,
+_ALL_VALIDATORS: list[tuple[str, type[BaseValidator]]] = [
+    ("rce", RCEValidator),
+    ("ssrf", SSRFValidator),
+    ("insecure_deserialization", InsecureDeserializationValidator),
+    ("arbitrary_file_rw", ArbitraryFileRWValidator),
+    ("dos", DoSValidator),
+    ("command_injection", CommandInjectionValidator),
 ]
 
-for _cls in _ALL_VALIDATORS:
-    _registry.register(_cls().vuln_type, _cls)
+for _vuln_type, _cls in _ALL_VALIDATORS:
+    _registry.register(_vuln_type, _cls)
