@@ -29,7 +29,7 @@ Execute all 9 steps sequentially using the orchestrator agent:
 1. **Target Extraction** (mandatory) → Clone repo, analyze project, **enumerate all public entry points** → `workspace/target.json` (must include `entry_points[]`)
 2. **Environment Setup** (mandatory) → Generate Dockerfile, build container, verify health. **If Docker is not accessible, ABORT the pipeline.**
 3. **Docker Readiness Gate** (mandatory) → Verify the target app runs correctly inside Docker (HTTP 200 / CLI works)
-4. **Vulnerability Analysis** (mandatory) → Search CVEs + static analysis + **entry point reachability assessment** → `workspace/vulnerabilities.json` (only reachable/conditional findings with confidence >= 7, types limited to the 9 supported types)
+4. **Vulnerability Analysis** (mandatory) → Search CVEs + static analysis + **entry point reachability assessment** → `workspace/vulnerabilities.json` (only reachable/conditional findings with confidence >= 7, types limited to the 12 supported types; language-gated: jndi_injection→Java, prototype_pollution→JS/TS, pickle_deserialization→Python)
 5. **PoC Generation** → Write exploit scripts targeting Docker container → `workspace/poc_scripts/`
 6. **Environment Init** → Deploy trigger binary, start TCP listeners, set up file monitors (see `templates/validation_framework.md`)
 7. **Reproduction + Validation** → Execute PoCs **inside Docker via `docker exec`** → legitimacy check (anti-cheat) → type-specific validation → `workspace/results.json`

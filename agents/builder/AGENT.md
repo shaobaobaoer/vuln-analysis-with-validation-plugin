@@ -163,7 +163,7 @@ HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
 ## Your Role
 
 - Auto-detect project tech stack (language, framework, databases)
-- Route to appropriate sub-modules (Docker Compose / Python / Node / Java)
+- Route to appropriate sub-modules (Docker Compose / Python / Node+TypeScript / Java / Go)
 - Provision database containers (PostgreSQL, MySQL, Redis, MongoDB)
 - Handle network checks, proxy detection, and mirror fallback for cloning
 - **Use `uv` for all Python dependency management** (never pip/conda/venv)
@@ -174,9 +174,10 @@ HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
 ## Referenced Skill
 
 - `skills/environment-builder/SKILL.md` — Main orchestration (Detect → Route → Build → Verify → Document)
-  - `app/python.md` — Python: conda/venv, ML deps, framework startup
-  - `app/node.md` — Node.js: npm/yarn/pnpm, migrations, startup
-  - `app/java.md` — Java: Maven/Gradle build, Spring Boot startup
+  - `app/python.md` — Python: uv, ML deps, framework startup (Flask/FastAPI/Django) + Dockerfile template
+  - `app/node.md` — Node.js / TypeScript: npm/yarn/pnpm, multi-stage TS build + Dockerfile template
+  - `app/java.md` — Java: Maven/Gradle multi-stage build, Spring Boot + Dockerfile template
+  - `app/go.md` — Go: multi-stage alpine build, framework detection + Dockerfile template
   - `app/docker-compose.md` — Docker Compose / Dockerfile workflows
   - `db/postgres.md`, `db/mysql.md`, `db/redis.md`, `db/mongo.md` — Database containers
   - `helpers/network-check.md` — Proxy detection, connectivity test, mirror clone
@@ -196,7 +197,8 @@ Run `helpers/network-check.md`: proxy detection → connectivity test → decide
 Always use `safe_git_clone` for cloning (auto mirror fallback).
 
 ### Step 1: Identify Project
-Detect: HAS_PYTHON, HAS_NODE, HAS_JAVA, HAS_DOCKER, HAS_DOCKERFILE, IS_ML_PROJECT, NEEDS_CONDA.
+Detect: HAS_PYTHON, HAS_NODE, HAS_JAVA, **HAS_GO**, HAS_DOCKER, HAS_DOCKERFILE, IS_ML_PROJECT, NEEDS_CONDA.
+- `HAS_GO=true` when `go.mod` exists in project root
 Detect databases: NEEDS_POSTGRES, NEEDS_MYSQL, NEEDS_REDIS, NEEDS_MONGO, NEEDS_SQLITE.
 
 ### Step 2: Route & Load Sub-Modules
@@ -214,9 +216,17 @@ Only load the sub-modules needed for this project.
 **HEALTHCHECK (MANDATORY)**: Every generated Dockerfile MUST include a `HEALTHCHECK` instruction. Every `docker-compose.yml` MUST include `healthcheck:` for each service. Audit of 175 runs found 25% of Dockerfiles still missing healthchecks. Use the appropriate pattern for the target type:
 
 ```dockerfile
-# Web app / HTTP service
+# Web app / HTTP service (Python/Java/Go — curl available)
 HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
   CMD curl -f http://localhost:8080/health || curl -f http://localhost:8080/ || exit 1
+
+# Node.js / TypeScript app (use node instead of curl in slim images)
+HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
+  CMD node -e "require('http').get('http://localhost:3000/health',r=>process.exit(r.statusCode<400?0:1)).on('error',()=>process.exit(1))"
+
+# Go app on alpine (wget available, no curl by default)
+HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
+  CMD wget -qO- http://localhost:8080/health || wget -qO- http://localhost:8080/ || exit 1
 
 # Python library (no HTTP server) — import check
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \

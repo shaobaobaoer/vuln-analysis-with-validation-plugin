@@ -1,53 +1,139 @@
 {
   "target": "example-vulnerable-app",
-  "generated_at": "2026-03-11T10:00:00Z",
+  "generated_at": "2026-03-18T10:00:00Z",
+  "schema_version": "1.9",
+  "note": "All 12 supported vulnerability types — 9 base types (all languages) + 3 language-gated types",
   "scripts": [
     {
       "vuln_id": "VULN-001",
       "type": "rce",
       "filename": "poc_rce_001.py",
-      "description": "Remote code execution via template injection",
+      "description": "Remote code execution via SSTI in Jinja2/EJS template rendering",
       "severity": "CRITICAL",
+      "cvss_score": 9.8,
+      "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "language_gate": null,
       "cve": "CVE-2024-12345"
     },
     {
       "vuln_id": "VULN-002",
       "type": "ssrf",
       "filename": "poc_ssrf_001.py",
-      "description": "SSRF via URL fetch functionality",
+      "description": "SSRF via user-controlled URL parameter reaching AWS metadata endpoint",
       "severity": "HIGH",
+      "cvss_score": 8.2,
+      "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:N",
+      "language_gate": null,
       "cve": null
     },
     {
       "vuln_id": "VULN-003",
       "type": "insecure_deserialization",
       "filename": "poc_insecure_deser_001.py",
-      "description": "Insecure pickle deserialization in API endpoint",
+      "description": "Insecure YAML/ObjectInputStream deserialization in API endpoint (non-pickle)",
       "severity": "CRITICAL",
+      "cvss_score": 9.8,
+      "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "language_gate": null,
       "cve": null
     },
     {
       "vuln_id": "VULN-004",
       "type": "arbitrary_file_rw",
       "filename": "poc_arbitrary_file_rw_001.py",
-      "description": "Arbitrary file write via upload endpoint",
+      "description": "Arbitrary file write via path traversal in upload endpoint",
       "severity": "CRITICAL",
+      "cvss_score": 9.1,
+      "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+      "language_gate": null,
       "cve": null
     },
     {
       "vuln_id": "VULN-005",
       "type": "dos",
       "filename": "poc_dos_001.py",
-      "description": "ReDoS via search parameter",
-      "severity": "LOW",
+      "description": "ReDoS via crafted regex input in search parameter (>5x slowdown)",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+      "language_gate": null,
       "cve": null
     },
     {
       "vuln_id": "VULN-006",
       "type": "command_injection",
       "filename": "poc_command_injection_001.py",
-      "description": "Command injection via ping functionality",
+      "description": "OS command injection via unsanitized hostname parameter in ping functionality",
       "severity": "HIGH",
+      "cvss_score": 7.8,
+      "cvss_vector": "AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "language_gate": null,
+      "cve": null
+    },
+    {
+      "vuln_id": "VULN-007",
+      "type": "sql_injection",
+      "filename": "poc_sql_injection_001.py",
+      "description": "SQLi via string interpolation in user lookup query (no parameterized query)",
+      "severity": "HIGH",
+      "cvss_score": 7.1,
+      "cvss_vector": "AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:L/A:N",
+      "language_gate": null,
+      "cve": null
+    },
+    {
+      "vuln_id": "VULN-008",
+      "type": "xss",
+      "filename": "poc_xss_001.py",
+      "description": "Stored XSS in comment field — script executes on page load for all users",
+      "severity": "HIGH",
+      "cvss_score": 8.2,
+      "cvss_vector": "AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:H/A:N",
+      "language_gate": null,
+      "cve": null
+    },
+    {
+      "vuln_id": "VULN-009",
+      "type": "idor",
+      "filename": "poc_idor_001.py",
+      "description": "IDOR — integer user ID in /api/users/{id} with no ownership check",
+      "severity": "HIGH",
+      "cvss_score": 6.5,
+      "cvss_vector": "AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "language_gate": null,
+      "cve": null
+    },
+    {
+      "vuln_id": "VULN-010",
+      "type": "jndi_injection",
+      "filename": "poc_jndi_injection_001.py",
+      "description": "Log4Shell — JNDI lookup triggered via User-Agent header (Log4j < 2.17.0)",
+      "severity": "CRITICAL",
+      "cvss_score": 10.0,
+      "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+      "language_gate": "java",
+      "cve": "CVE-2021-44228"
+    },
+    {
+      "vuln_id": "VULN-011",
+      "type": "prototype_pollution",
+      "filename": "poc_prototype_pollution_001.py",
+      "description": "Prototype pollution via __proto__ in JSON merge → EJS gadget chain → RCE",
+      "severity": "HIGH",
+      "cvss_score": 8.1,
+      "cvss_vector": "AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "language_gate": "javascript",
+      "cve": null
+    },
+    {
+      "vuln_id": "VULN-012",
+      "type": "pickle_deserialization",
+      "filename": "poc_pickle_deserialization_001.py",
+      "description": "Pickle deserialization RCE — __reduce__ gadget via HTTP multipart upload endpoint",
+      "severity": "CRITICAL",
+      "cvss_score": 9.8,
+      "cvss_vector": "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "language_gate": "python",
       "cve": null
     }
   ]

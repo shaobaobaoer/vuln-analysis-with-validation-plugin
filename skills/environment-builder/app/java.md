@@ -5,6 +5,75 @@
 前置依赖：`helpers/port-isolation.md`。
 数据库已由 `db/*.md` 启动完毕。
 
+> **MANDATORY (vuln-analysis)**: 漏洞分析模式下，所有执行必须在 Docker 容器内进行。先生成 Dockerfile，再继续后续步骤。
+
+---
+
+## Dockerfile 模板（Java multi-stage build）
+
+### Maven 项目
+
+```dockerfile
+# ── Stage 1: builder ──────────────────────────────────────────────────────────
+FROM maven:3.9-eclipse-temurin-<java_version> AS builder
+WORKDIR /build
+
+# 缓存依赖层
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+COPY src/ ./src/
+RUN mvn clean package -DskipTests -B
+
+# ── Stage 2: runtime ─────────────────────────────────────────────────────────
+FROM eclipse-temurin:<java_version>-jre-alpine
+WORKDIR /app
+
+COPY --from=builder /build/target/*.jar app.jar
+
+EXPOSE <port>
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD wget -qO- http://localhost:<port>/actuator/health || \
+        wget -qO- http://localhost:<port>/health || exit 1
+
+CMD ["java", "-jar", "app.jar"]
+```
+
+### Gradle 项目
+
+```dockerfile
+# ── Stage 1: builder ──────────────────────────────────────────────────────────
+FROM gradle:8.5-jdk<java_version> AS builder
+WORKDIR /build
+
+COPY build.gradle* settings.gradle* gradle.properties* ./
+COPY gradle/ ./gradle/
+RUN gradle dependencies --no-daemon 2>/dev/null || true
+
+COPY src/ ./src/
+RUN gradle bootJar --no-daemon -x test
+
+# ── Stage 2: runtime ─────────────────────────────────────────────────────────
+FROM eclipse-temurin:<java_version>-jre-alpine
+WORKDIR /app
+
+COPY --from=builder /build/build/libs/*.jar app.jar
+
+EXPOSE <port>
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD wget -qO- http://localhost:<port>/actuator/health || \
+        wget -qO- http://localhost:<port>/health || exit 1
+
+CMD ["java", "-jar", "app.jar"]
+```
+
+### 变量替换
+
+| 占位符 | 替换为 |
+|--------|--------|
+| `<java_version>` | `pom.xml` 中 `<java.version>` 或 `build.gradle` 中 `sourceCompatibility`（如 `17`、`21`）；默认 `17` |
+| `<port>` | 检测到的 `server.port`（默认 `8080`） |
+
 ---
 
 ## 检测构建工具

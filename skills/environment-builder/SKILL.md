@@ -1,9 +1,11 @@
 ---
 name: environment-builder
 description: >
-  Build isolated environments for vulnerability testing targets. Auto-detect tech stack,
-  route to sub-modules (Docker Compose / Python / Node / Java), provision databases,
-  verify health, and generate setup documentation. Supports conda, venv, and Docker.
+  Build Docker environments for vulnerability testing targets. Auto-detect tech stack,
+  route to sub-modules (Docker Compose / Python / Node+TypeScript / Java / Go), provision
+  databases, verify health, and generate setup documentation. Generates Dockerfiles for all
+  4 target languages: Python (uv), Node.js/TypeScript (multi-stage), Java (Maven/Gradle
+  multi-stage), Go (alpine multi-stage). Docker-first — all execution inside containers.
 origin: vuln-analysis
 ---
 
@@ -83,6 +85,7 @@ cd "$PROJECT_DIR"
 HAS_PYTHON=false; [ -f requirements.txt ] || [ -f pyproject.toml ] || [ -f setup.py ] || [ -f Pipfile ] || [ -f environment.yml ] || [ -f conda.yaml ] && HAS_PYTHON=true
 HAS_NODE=false;   [ -f package.json ] && HAS_NODE=true
 HAS_JAVA=false;   [ -f pom.xml ] || [ -f build.gradle ] && HAS_JAVA=true
+HAS_GO=false;     [ -f go.mod ] && HAS_GO=true
 HAS_DOCKER=false; [ -f docker-compose.yml ] || [ -f docker-compose.yaml ] || [ -f compose.yml ] && HAS_DOCKER=true
 HAS_DOCKERFILE=false; [ -f Dockerfile ] && HAS_DOCKERFILE=true
 
@@ -153,8 +156,9 @@ Based on detection results, **only read the relevant sub-module files**:
 | `HAS_DOCKER=true` (has compose) | `app/docker-compose.md` |
 | `HAS_DOCKERFILE=true` (Dockerfile only) | `app/docker-compose.md` (reuse its Dockerfile section) |
 | `HAS_PYTHON=true` | `app/python.md` |
-| `HAS_NODE=true` | `app/node.md` |
+| `HAS_NODE=true` | `app/node.md` (covers both JavaScript and TypeScript) |
 | `HAS_JAVA=true` | `app/java.md` |
+| `HAS_GO=true` | `app/go.md` |
 
 ### Image check — on demand
 

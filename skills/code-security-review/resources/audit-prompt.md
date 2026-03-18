@@ -26,19 +26,22 @@ Perform a security-focused code review to identify **HIGH-CONFIDENCE** security 
 
 ### Supported Vulnerability Types (Pipeline Output)
 
-Findings MUST map to one of these 9 types. Findings that cannot be mapped are excluded.
+Findings MUST map to one of these 12 types. Findings that cannot be mapped are excluded.
 
-| Type Key | What to Look For |
-|----------|-----------------|
-| `rce` | `eval()`, `exec()`, `system()`, template injection (SSTI), dynamic code execution, sandbox escape |
-| `command_injection` | `os.system(f"cmd {user_input}")`, `subprocess.call(shell=True)`, shell string concatenation |
-| `insecure_deserialization` | `pickle.loads()`, `yaml.load()` (unsafe), `unserialize()`, `Marshal.load()` |
-| `ssrf` | `requests.get(user_url)`, URL fetching without allowlist, DNS rebinding |
-| `arbitrary_file_rw` | `open(user_input)`, path traversal, zip slip, unrestricted file upload, LFI |
-| `dos` | ReDoS, XML bomb, hash collision, deeply nested JSON/XML, single-request algorithmic complexity |
-| `sql_injection` | `cursor.execute(f"...")`, `"SELECT ... " + user_input`, ORM `.raw(f"...")`, `.execute(text(f"..."))`, `Model.objects.raw(f"...")` |
-| `xss` | User-controlled data rendered in HTML without escaping: `render_template_string(user_input)`, `innerHTML = user_data`, `Markup(user_input)`, `mark_safe(user_input)`, `dangerouslySetInnerHTML` |
-| `idor` | Missing ownership verification on resource access: `Object.query.get(id)` without `user == current_user`, `find_by_id(params[:id])` without authorization check, `/api/users/{id}` returning 200 for any authenticated user regardless of ownership |
+| Type Key | What to Look For | Language Scope |
+|----------|-----------------|----------------|
+| `rce` | `eval()`, `exec()`, `system()`, template injection (SSTI), dynamic code execution, sandbox escape | All |
+| `command_injection` | `os.system(f"cmd {user_input}")`, `subprocess.call(shell=True)`, shell string concatenation | All |
+| `insecure_deserialization` | `yaml.load()` (unsafe), `unserialize()`, `Marshal.load()`, `ObjectInputStream.readObject()`, `XStream.fromXML()` | All (not pickle for Python — use `pickle_deserialization` instead) |
+| `ssrf` | `requests.get(user_url)`, URL fetching without allowlist, DNS rebinding | All |
+| `arbitrary_file_rw` | `open(user_input)`, path traversal, zip slip, unrestricted file upload, LFI | All |
+| `dos` | ReDoS, XML bomb, hash collision, deeply nested JSON/XML, single-request algorithmic complexity | All |
+| `sql_injection` | `cursor.execute(f"...")`, `"SELECT ... " + user_input`, ORM `.raw(f"...")`, `.execute(text(f"..."))`, `Model.objects.raw(f"...")` | All |
+| `xss` | User-controlled data rendered in HTML without escaping: `render_template_string(user_input)`, `innerHTML = user_data`, `Markup(user_input)`, `mark_safe(user_input)`, `dangerouslySetInnerHTML` | All |
+| `idor` | Missing ownership verification on resource access: `Object.query.get(id)` without `user == current_user`, `find_by_id(params[:id])` without authorization check, `/api/users/{id}` returning 200 for any authenticated user regardless of ownership | All |
+| `jndi_injection` | `logger.info(userInput)` with Log4j 2 < 2.17.0 — evaluates `${jndi:ldap://...}` → remote class loading; `InitialContext.lookup(userInput)` | **Java only** |
+| `prototype_pollution` | Unsafe deep merge: `_.merge(target, userInput)`, `jQuery.extend(true, {}, userInput)`, recursive assign without `__proto__` key filter → downstream gadget (EJS `outputFunctionName`, Pug `block`) | **JS/TS only** |
+| `pickle_deserialization` | `pickle.loads(request.data)`, `dill.loads(network_data)`, `cloudpickle.loads(body)` — network-accessible deserialization endpoint | **Python only** |
 
 **sql_injection scope**: Only for webapp/service targets with a database backend accessed via HTTP endpoints. Not valid for library/CLI targets.
 
@@ -46,7 +49,7 @@ Findings MUST map to one of these 9 types. Findings that cannot be mapped are ex
 
 **idor scope**: Only webapp/service targets. Must have evidence that the endpoint returns another user's data when accessed with a different user's credentials. Missing authorization check on a reachable endpoint is NOT sufficient — there must be evidence the access control is actually absent (no `.filter(user=request.user)`, no permission decorator, no ownership comparison). Do NOT report IDOR for admin-only endpoints (those are intentional) or UUID-based IDs (assumed unguessable per Precedent #2).
 
-### Additional Categories (for context, but findings must map to the 8 types above)
+### Additional Categories (for context, but findings must map to the 12 types above)
 
 - XXE, auth bypass, secrets exposure — scan for these during Phase 1 discovery, but they are **not supported output types**. If found, check if they can be mapped (e.g., XXE → `arbitrary_file_rw`, Code Injection → `rce`, Path Traversal → `arbitrary_file_rw`). If unmappable, exclude.
 

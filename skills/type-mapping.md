@@ -1,8 +1,8 @@
 # Vulnerability Type Mapping (Authoritative Source)
 
-All vulnerability findings MUST use one of the 11 supported type keys below. The `type` field is a **machine-readable lowercase key**, NEVER a descriptive English name.
+All vulnerability findings MUST use one of the 12 supported type keys below. The `type` field is a **machine-readable lowercase key**, NEVER a descriptive English name.
 
-## 11 Supported Types
+## 12 Supported Types
 
 | Type Key | Description | Language Scope |
 |----------|-------------|---------------|
@@ -17,6 +17,7 @@ All vulnerability findings MUST use one of the 11 supported type keys below. The
 | `idor` | Insecure Direct Object Reference / Broken Access Control | All |
 | `jndi_injection` | JNDI Injection (Log4Shell pattern) | **Java only** |
 | `prototype_pollution` | Prototype Chain Pollution | **JavaScript / TypeScript only** |
+| `pickle_deserialization` | Python Pickle RCE via `__reduce__` | **Python only** |
 
 ## Mapping: Descriptive Names to Type Keys
 
@@ -26,7 +27,9 @@ Arbitrary Code Execution, Arbitrary Code Execution (Safe Mode Bypass), Arbitrary
 
 ### MAP to `insecure_deserialization`
 
-Insecure Deserialization, insecure deserialization, Insecure Deserialization (RCE), Insecure Deserialization (Pickle), Unsafe Deserialization, unsafe_deserialization, Unsafe Deserialization (HDF5 Legacy Format), Unsafe YAML Loading, yaml_deserialization, Arbitrary Code Execution via Deserialization, Unsafe Deserialization in DataPipe Decoder, deserialization
+Insecure Deserialization, insecure deserialization, Insecure Deserialization (RCE), Unsafe Deserialization, unsafe_deserialization, Unsafe Deserialization (HDF5 Legacy Format), Unsafe YAML Loading, yaml_deserialization, Arbitrary Code Execution via Deserialization, Unsafe Deserialization in DataPipe Decoder, deserialization, ObjectInputStream RCE, Java deserialization gadget chain, XStream deserialization, Jackson enableDefaultTyping
+
+> **Disambiguation**: "Insecure Deserialization (Pickle)" for **Python targets with network-accessible `pickle.loads()`** → use `pickle_deserialization` instead. `insecure_deserialization` covers: Java (ObjectInputStream), YAML unsafe load, Ruby Marshal, PHP unserialize, and Python `pickle.loads()` for LOCAL file loading only.
 
 ### MAP to `ssrf`
 
@@ -72,8 +75,14 @@ Prototype Pollution, prototype chain pollution, __proto__ injection, constructor
 
 > **Prototype Pollution Scope Rule**: JavaScript/TypeScript/Node.js targets only. Only valid when there is a traceable path from user input to a deep-merge, recursive assign, or `__proto__`/`constructor.prototype` property write — AND either RCE via template gadget or privilege escalation is demonstrable. Generic prototype pollution without measurable impact is excluded. Non-JS/TS targets MUST NOT have `prototype_pollution` findings.
 
+### MAP to `pickle_deserialization`
+
+Pickle Deserialization, Python Pickle RCE, unsafe pickle.loads, pickle injection, pickle_rce, pickle deserialization RCE, Arbitrary Code Execution via Pickle (network-accessible), dill deserialization, cloudpickle deserialization
+
+> **Pickle Deserialization Scope Rule**: Python targets only. Only valid when `pickle.loads()` (or `dill.loads()`, `cloudpickle.loads()`) receives data over a **network channel** (HTTP request body, query parameter, WebSocket, socket). Local file loading (`pickle.load(open(path))` with caller-supplied path) is NOT this type — it is `insecure_deserialization` or excluded. ML model loading is excluded. Non-Python targets MUST NOT have `pickle_deserialization` findings.
+
 ## EXCLUDE (Not Supported)
 
-XXE (map to `arbitrary_file_rw` if file read occurs), Vertical Privilege Escalation / Admin Bypass (not IDOR — different attack), Information Disclosure, Hardcoded Credentials, Weak Cryptography, Log Spoofing, arbitrary_plugin_loading, credential_exposure_via_environment, insecure_temp_file, JWT Signature Not Verified, Default No-Auth Configuration, Self-XSS, CSV Injection, HTML Injection (no script execution), IDOR via UUID guessing (assumed unguessable), Prototype Pollution without measurable impact (no RCE gadget, no privilege bypass)
+XXE (map to `arbitrary_file_rw` if file read occurs), Vertical Privilege Escalation / Admin Bypass (not IDOR — different attack), Information Disclosure, Hardcoded Credentials, Weak Cryptography, Log Spoofing, arbitrary_plugin_loading, credential_exposure_via_environment, insecure_temp_file, JWT Signature Not Verified, Default No-Auth Configuration, Self-XSS, CSV Injection, HTML Injection (no script execution), IDOR via UUID guessing (assumed unguessable), Prototype Pollution without measurable impact (no RCE gadget, no privilege bypass), Pickle loading of local files without network path
 
-**Rule**: If a finding cannot be mapped to one of the 11 types, it MUST be excluded. NEVER invent new type names.
+**Rule**: If a finding cannot be mapped to one of the 12 types, it MUST be excluded. NEVER invent new type names.

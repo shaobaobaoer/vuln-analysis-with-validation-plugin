@@ -106,11 +106,11 @@ vuln-analysis/
 │   ├── reproduce.md                       #   /reproduce — run reproduction
 │   └── report.md                          #   /report — generate report
 │
-├── skills/                                # Skill modules (11 skills)
+├── skills/                                # Skill modules (12 skills)
 │   ├── target-extraction/SKILL.md         #   Step 1: target + entry point analysis
 │   ├── environment-builder/               #   Step 2: modular env setup
 │   │   ├── SKILL.md                       #     Detect → Route → Build → Verify → Document
-│   │   ├── app/                           #     Language-specific (python, node, java, docker-compose)
+│   │   ├── app/                           #     Language-specific (python, node/ts, java, go, docker-compose)
 │   │   ├── db/                            #     Database provisioning (postgres, mysql, redis, mongo)
 │   │   ├── helpers/                       #     Network check, image check, port isolation
 │   │   ├── output/                        #     ENVIRONMENT_SETUP.md template

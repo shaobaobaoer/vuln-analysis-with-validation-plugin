@@ -3,9 +3,11 @@ name: code-security-review
 description: >
   AI-driven code security review with mandatory three-phase process: (1) Security Audit to produce raw findings,
   (2) False Positive Filtering with hard exclusions + AI-based confidence scoring, (3) Report with only high-confidence
-  findings. Integrates regex-based auto-exclusion, 30 hard exclusion rules (incl. language-gated JNDI and PP gates),
+  findings. Integrates regex-based auto-exclusion, 33 filtering rules (Rules 1-27: general hard exclusions; Rules 28-33:
+  type-specific quality gates for sql_injection/xss/idor/jndi_injection/prototype_pollution/pickle_deserialization),
   22 precedents, and 1-10 confidence scoring. Supports all programming languages; language-specific types (jndi_injection
-  for Java, prototype_pollution for JS/TS) enforced via quality gates. Derived from anthropics/claude-code-security-review.
+  for Java, prototype_pollution for JS/TS, pickle_deserialization for Python) enforced via quality gates. Derived from
+  anthropics/claude-code-security-review.
 origin: vuln-analysis
 ---
 
@@ -117,7 +119,7 @@ Apply regex-based patterns from `resources/hard-exclusion-patterns.md`:
 - Non-C/C++ files → Memory safety findings excluded
 - `.html` files → SSRF findings excluded
 
-### Step 2b — AI Filtering Pass (30 Hard Exclusions)
+### Step 2b — AI Filtering Pass (33 Filtering Rules)
 
 Automatically exclude findings matching:
 
@@ -200,7 +202,19 @@ A finding is NOT IDOR unless a user-controlled ID retrieves another user's resou
 
 **Evidence required**: Identify unsafe merge function, user-controlled input path, polluted property, and downstream gadget (if RCE claimed).
 
-### Step 2c — Intended Functionality Check
+### Step 2c-vi — Pickle Deserialization Quality Gate (Python targets only — apply to ALL `pickle_deserialization` candidates)
+
+**Immediate auto-exclude** if target language is NOT Python. For Python targets, see `resources/filtering-rules.md §Pickle Deserialization Quality Gate` (rule #33).
+
+- Local file loading (`pickle.load(open(path))` with caller-supplied path) → EXCLUDE (local access, not network-exploitable)
+- ML model loading (`joblib.load`, `torch.load`, `pickle.load` for model checkpoints) → EXCLUDE (local file operation)
+- `yaml.load()` without SafeLoader → map to `insecure_deserialization`, NOT `pickle_deserialization`
+- `pickle.loads()` receiving network data (HTTP body, request parameter, socket) → **KEEP** (CVSS 9.8 unauthenticated)
+- `pickle.loads(base64.b64decode(request.data))` → also valid **KEEP** (network-accessible, base64 is transport encoding only)
+
+**Evidence required**: Confirm Python language, trace HTTP/socket input to `pickle.loads()` call site, confirm no base64 is used as security (it is not — only transport encoding).
+
+### Step 2c-vii — Intended Functionality Check
 
 Assess whether the exploitable behavior **exceeds the designed purpose** of the API. If the API is designed to perform the "dangerous" operation (e.g., `download_from_url()` fetching arbitrary URLs), the finding is by design — not a vulnerability. Apply rules from `resources/filtering-rules.md §Intended Functionality Exclusion`.
 

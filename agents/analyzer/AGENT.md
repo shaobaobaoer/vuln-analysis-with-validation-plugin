@@ -24,7 +24,7 @@ You are a security research specialist. You analyze GitHub repositories to ident
 - `skills/vulnerability-scanner/SKILL.md` — Vulnerability discovery with integrated filtering
 - `skills/code-security-review/SKILL.md` — Mandatory 3-phase code audit process
   - `resources/audit-prompt.md` — Audit methodology and severity guidelines
-  - `resources/filtering-rules.md` — 28 hard exclusions, 22 precedents, confidence scoring
+  - `resources/filtering-rules.md` — 33 filtering rules (Rules 1-27: general hard exclusions; Rules 28-33: type-specific quality gates for sqli/xss/idor/jndi/pp/pickle), 22 precedents, confidence scoring
   - `resources/hard-exclusion-patterns.md` — Regex-based auto-exclusion patterns
   - `resources/customization-guide.md` — Custom scan/filter instruction extension
 
@@ -70,7 +70,7 @@ Read `workspace/target.json`. Determine `project_type` and `valid_vuln_types`.
 Does the original source code contain HTTP route definitions
 (@app.route, urlpatterns, router.get, @Controller, app.listen)?
   YES → project_type = "webapp" or "service"
-        valid_vuln_types = all 9 types (webapp) or all except "xss" and "idor" (service)
+        valid_vuln_types = all 12 types (webapp, with language-gating) or all except "xss" and "idor" (service)
   NO  → Does it have a network daemon/server (grpc.server, socket.bind in main loop)?
           YES → project_type = "service"
                 valid_vuln_types = ["rce","insecure_deserialization","arbitrary_file_rw","dos","command_injection","sql_injection"]
@@ -206,7 +206,7 @@ For each raw finding, trace the call chain from the vulnerable code BACK to a pu
 
 **Phase 3c — False Positive Filtering** (MANDATORY — never skip):
 1. Hard Exclusion Pass: Apply regex patterns from `hard-exclusion-patterns.md`
-2. AI Filtering: Apply 28 hard exclusion rules from `filtering-rules.md`
+2. AI Filtering: Apply 33 filtering rules from `filtering-rules.md` (Rules 1-27: general exclusions; Rules 28-33: type-specific quality gates)
 3. Entry Point Reachability Filter: Apply rules from `filtering-rules.md` §Entry Point Reachability Filter
 4. Intended Functionality Check: Apply rules from `filtering-rules.md` §Intended Functionality Exclusion — exclude findings where the exploitable behavior matches the API's designed purpose (e.g., `download_from_url()` doing SSRF is by design, not a vulnerability)
 5. Precedent Check: Apply 22 precedent rules
@@ -282,19 +282,19 @@ Rank by: severity > reachability > exploitability > impact > confidence (thresho
 
 ## Supported Vulnerability Types
 
-Every finding in `workspace/vulnerabilities.json` MUST have its `type` field set to one of these 9 supported types:
+Every finding in `workspace/vulnerabilities.json` MUST have its `type` field set to one of these 12 supported types:
 
-`rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss`, `idor`
+`rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss`, `idor`, `jndi_injection` (Java only), `prototype_pollution` (JS/TS only), `pickle_deserialization` (Python only)
 
 **Type scope by target type**:
-- `webapp`: all 9 types (idor only for integer-keyed user-owned resources, not UUID-keyed)
-- `service`: rce, ssrf (if HTTP), insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection
+- `webapp`: all 12 types with language gating (idor: integer-keyed only; jndi_injection: Java only; prototype_pollution: JS/TS only; pickle_deserialization: Python only)
+- `service`: rce, ssrf (if HTTP), insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection (+ language-gated types where applicable)
 - `cli`: rce, arbitrary_file_rw, dos, command_injection
-- `library`: dos, command_injection, insecure_deserialization (network-receiving only)
+- `library`: dos, command_injection, insecure_deserialization (network-receiving only), prototype_pollution (JS/TS libs with deep-merge exports)
 
 > **Full type mapping**: See `skills/type-mapping.md` for comprehensive descriptive-name → type-key mapping, EXCLUDE list, and all observed variations.
 
-**CRITICAL**: The `type` field MUST be the exact lowercase key (e.g., `rce`), NEVER a descriptive English name. If a finding cannot be mapped to one of the 9 types, EXCLUDE it and place in `excluded_findings[]`.
+**CRITICAL**: The `type` field MUST be the exact lowercase key (e.g., `rce`), NEVER a descriptive English name. If a finding cannot be mapped to one of the 12 types, EXCLUDE it and place in `excluded_findings[]`.
 
 **sql_injection scope**: Valid for webapp/service targets with a backend database. Validate with error-based, time-based blind, or boolean-based techniques via the target's HTTP interface. See `skills/validate-sql-injection/SKILL.md`.
 
@@ -407,7 +407,7 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
 | Key | Type | Description |
 |-----|------|-------------|
 | `id` | string | Unique identifier (VULN-001, VULN-002, ...) |
-| `type` | string | One of the 11 supported types (exact lowercase key); language-gated types must match target language |
+| `type` | string | One of the 12 supported types (exact lowercase key); language-gated types must match target language |
 | `title` | string | Short descriptive title |
 | `severity` | string | `critical`, `high`, `medium`, or `low` |
 | `confidence` | integer | 7-10 (findings < 7 are excluded) |
@@ -571,6 +571,7 @@ Calculate the CVSS 3.1 base score automatically from the finding's metadata. Thi
 | `jndi_injection` (Log4Shell / InitialContext.lookup) | H | H | H |
 | `prototype_pollution` (RCE via template gadget) | H | H | H |
 | `prototype_pollution` (privilege escalation only) | L | H | N |
+| `pickle_deserialization` (unauthenticated network RCE) | H | H | H |
 
 ### CVSS 3.1 Score Lookup Table
 

@@ -18,13 +18,23 @@ Analyze a GitHub repository and extract target metadata for the vulnerability an
 
 1. Clone the repository with `git clone --depth 1`
 2. Read key files: README, package manifests, Dockerfiles, entry points
-3. Detect tech stack from file extensions and config files:
-   - `package.json` → Node.js
-   - `requirements.txt` / `pyproject.toml` / `setup.py` → Python
-   - `go.mod` → Go
-   - `pom.xml` / `build.gradle` → Java
-   - `Gemfile` → Ruby
-   - `Cargo.toml` → Rust
+3. Detect tech stack from file extensions and config files — set `language` field exactly as shown:
+
+   | Config File(s) | `language` value | Detection refinement |
+   |---------------|-----------------|---------------------|
+   | `tsconfig.json` OR `*.ts` source files | `"typescript"` | Check tsconfig.json OR grep for `.ts` files in src/ |
+   | `package.json` only (no tsconfig, no .ts) | `"javascript"` | Pure JS project |
+   | `requirements.txt` / `pyproject.toml` / `setup.py` / `Pipfile` | `"python"` | — |
+   | `go.mod` | `"go"` | — |
+   | `pom.xml` / `build.gradle` / `build.gradle.kts` | `"java"` | — |
+   | `Gemfile` | `"ruby"` | — |
+   | `Cargo.toml` | `"rust"` | — |
+   | `composer.json` / `*.php` dominant | `"php"` | — |
+
+   **TypeScript disambiguation (CRITICAL)**: A project is `"typescript"` if it has `tsconfig.json` OR if more than 50% of source files use the `.ts` extension. Use `"javascript"` only for pure JS projects. This matters because `prototype_pollution` is only valid for `"typescript"` or `"javascript"` targets, and the validator will activate for both.
+
+   **Mixed-language projects**: Use the language of the **primary HTTP server** (the language implementing the API handlers). If a TypeScript backend has Java microservices, the primary target language is `"typescript"`.
+
 4. **Classify project type** — see §Target Type Classification below
 5. **Assess network attack surface** — see §Network Attack Surface Assessment below
 6. Write `workspace/target.json` with extracted metadata
@@ -167,27 +177,38 @@ After classifying the project type, enumerate all public entry points. These def
 
 ```json
 {
-  "project_name": "example-project",
-  "project_type": "webapp|service|cli|library",
+  "project_name": "example-flask-app",
+  "project_type": "webapp",
   "network_exploitable": true,
-  "valid_vuln_types": ["rce", "ssrf", "insecure_deserialization", "arbitrary_file_rw", "dos", "command_injection", "sql_injection", "xss", "idor"],
-  "version": "1.2.3",
+  "valid_vuln_types": ["rce", "ssrf", "insecure_deserialization", "arbitrary_file_rw", "dos",
+                       "command_injection", "sql_injection", "xss", "idor",
+                       "pickle_deserialization"],
+  "version": "2.1.0",
   "language": "python",
   "framework": "flask",
-  "repo_url": "https://github.com/owner/repo",
-  "dependencies": ["flask", "requests"],
-  "attack_surface": "Description of the attack surface",
+  "repo_url": "https://github.com/owner/example-flask-app",
+  "dependencies": ["flask", "requests", "sqlalchemy"],
+  "attack_surface": "Flask web app with REST API, user authentication, file upload endpoint",
   "entry_points": [
     {
-      "type": "library_api|webapp_endpoint|cli_command|service_method",
-      "path": "module.function()|POST /api/exec|tool --input|grpc.Method",
-      "access_level": "none|auth|admin|local",
-      "parameters": ["param1", "param2"],
+      "type": "webapp_endpoint",
+      "path": "POST /api/upload",
+      "access_level": "auth",
+      "parameters": ["file", "format"],
       "source_file": "app/views.py:42"
+    },
+    {
+      "type": "webapp_endpoint",
+      "path": "GET /api/users/:id",
+      "access_level": "auth",
+      "parameters": ["id"],
+      "source_file": "app/views.py:88"
     }
   ]
 }
 ```
+
+> **Language-specific type injection reminder**: `valid_vuln_types` in the example above includes `pickle_deserialization` because `language == "python"` and `project_type == "webapp"`. A Java webapp would include `jndi_injection`; a TypeScript webapp would include `prototype_pollution`. Always apply the §Language-specific type injection table after setting the base list.
 
 **Required fields**: `project_name`, `language`, `project_type`, `network_exploitable`, `valid_vuln_types`, `entry_points`.
 

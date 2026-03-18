@@ -43,7 +43,7 @@ The following fallback strategies are **STRICTLY FORBIDDEN**. If Docker is unava
 
 ## Supported Vulnerability Types
 
-The pipeline supports **11 vulnerability types**. Any finding outside this list MUST be mapped to one of these or excluded:
+The pipeline supports **12 vulnerability types**. Any finding outside this list MUST be mapped to one of these or excluded:
 
 | Type Key | Description | Valid For | Language Scope |
 |----------|-------------|-----------|---------------|
@@ -58,8 +58,9 @@ The pipeline supports **11 vulnerability types**. Any finding outside this list 
 | `idor` | Insecure Direct Object Reference | webapp only | All |
 | `jndi_injection` | JNDI Injection (Log4Shell) | webapp, service | **Java only** |
 | `prototype_pollution` | Prototype Chain Pollution → RCE/privesc | webapp, service, library | **JavaScript/TypeScript only** |
+| `pickle_deserialization` | Python Pickle RCE via `__reduce__` | webapp, service | **Python only** |
 
-**Mapping rules**: "Path Traversal" → `arbitrary_file_rw`. "Code Injection" / "Template Injection" → `rce`. "SQLi" → `sql_injection`. "Reflected/Stored XSS" → `xss` (auto-triggering only). "Broken Access Control" / "BOLA" / "Horizontal Privilege Escalation" → `idor` (integer IDs only, not UUIDs). "Log4Shell" / "JNDI Lookup" → `jndi_injection` (Java only). "__proto__ pollution" / "lodash merge pollution" → `prototype_pollution` (JS/TS only). "Information Disclosure" is NOT a supported type — exclude it unless it maps to one of the 11.
+**Mapping rules**: "Path Traversal" → `arbitrary_file_rw`. "Code Injection" / "Template Injection" → `rce`. "SQLi" → `sql_injection`. "Reflected/Stored XSS" → `xss` (auto-triggering only). "Broken Access Control" / "BOLA" / "Horizontal Privilege Escalation" → `idor` (integer IDs only, not UUIDs). "Log4Shell" / "JNDI Lookup" → `jndi_injection` (Java only). "__proto__ pollution" / "lodash merge pollution" → `prototype_pollution` (JS/TS only). "Pickle RCE" / "unsafe pickle.loads" → `pickle_deserialization` (Python only). "Information Disclosure" is NOT a supported type — exclude it unless it maps to one of the 12.
 
 ---
 
@@ -89,7 +90,7 @@ Each pipeline stage activates a SPECIFIC, LIMITED set of skills. No skill should
 
 4. **Reporter activates in Step 9 ONLY**: Never invoke `agents/reporter/AGENT.md` until all reproduction attempts (Steps 7-8) are complete.
 
-5. **Language-gated validators**: Only invoke `validate-jndi-injection` when `target.json.language == "java"`. Only invoke `validate-prototype-pollution` when `target.json.language` is `"javascript"` or `"typescript"`. Invoking wrong-language validators wastes tokens and produces invalid results.
+5. **Language-gated validators**: Only invoke `validate-jndi-injection` when `target.json.language == "java"`. Only invoke `validate-prototype-pollution` when `target.json.language` is `"javascript"` or `"typescript"`. Only invoke `validate-pickle-deserialization` when `target.json.language == "python"`. Invoking wrong-language validators wastes tokens and produces invalid results.
 
 6. **Target-type-gated validators**: Only invoke `validate-xss` and `validate-idor` for `webapp` targets. Only invoke `validate-ssrf` for `webapp` and `service` targets. Skip these entirely for `library` and `cli` targets.
 
@@ -140,7 +141,7 @@ Each pipeline stage activates a SPECIFIC, LIMITED set of skills. No skill should
 - **Delegate to**: `analyzer` agent — **USE `Agent` TOOL NOW. Do NOT scan source code or write vulnerabilities.json yourself.**
 - Input: `workspace/target.json` (MUST include `entry_points[]`), source code
 - Output: `workspace/vulnerabilities.json`
-- The analyzer MUST only output vulnerabilities with types from the 9 supported types listed above
+- The analyzer MUST only output vulnerabilities with types from the 12 supported types listed above (with language gating enforced)
 - **Every finding MUST include `entry_point` with reachability assessment** — findings with `not_reachable` are excluded
 - **Abort pipeline if this fails**
 
@@ -451,7 +452,7 @@ After each step completes (status set to `completed` by the sub-agent), the orch
 | 1 - Target Extraction | `workspace/target.json` | File exists, valid JSON, contains required keys: `project_name`, `language`, `framework`, `version`, `entry_points`. **`entry_points` array must be non-empty** — these define the attack surface. **`version` is mandatory** — the disclosure lookup in Step 4 uses it to determine whether known CVEs apply to the scanned version |
 | 2 - Environment Setup | `workspace/Dockerfile` | File exists; Docker container is running and responsive (health check); **`ENVIRONMENT_SETUP.md` exists** (mandatory documentation); **Dockerfile uses `uv` for Python deps** (NEVER pip); **Docker resources are labeled** with `vuln-analysis.pipeline-id` |
 | 3 - Docker Readiness Gate | Running container | `docker ps` shows container up; `curl` to main endpoint returns HTTP 200 (or CLI runs); health check passes. If fail → return to Step 2 |
-| 4 - Vulnerability Analysis | `workspace/vulnerabilities.json` | File exists, valid JSON, contains `vulnerabilities` array, each entry has `id`, `type`, `severity`, `confidence`, `entry_point`. **Type must be one of the 11 supported types** (rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection, xss, idor, jndi_injection, prototype_pollution). **Language-gated types enforced**: jndi_injection → Java only; prototype_pollution → JS/TS only. **No XXE, auth bypass, or other unsupported types.** **Every finding must have `entry_point.reachability` = `reachable` or `conditional`.** **Confidence >= 7.** Abort if fails |
+| 4 - Vulnerability Analysis | `workspace/vulnerabilities.json` | File exists, valid JSON, contains `vulnerabilities` array, each entry has `id`, `type`, `severity`, `confidence`, `entry_point`. **Type must be one of the 12 supported types** (rce, ssrf, insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection, xss, idor, jndi_injection, prototype_pollution, pickle_deserialization). **Language-gated types enforced**: jndi_injection → Java only; prototype_pollution → JS/TS only; pickle_deserialization → Python only. **No XXE, auth bypass, or other unsupported types.** **Every finding must have `entry_point.reachability` = `reachable` or `conditional`.** **Confidence >= 7.** Abort if fails |
 | 5 - PoC Generation | `workspace/poc_manifest.json` | File exists, valid JSON, at least one PoC entry referencing an existing script file. **Each script follows naming convention `poc_<type>_<NNN>.py`** (e.g., `poc_rce_001.py`). **Each script accepts `--target` and `--timeout` CLI args.** |
 | 6 - Environment Init | Monitoring infrastructure | TCP listeners active, trigger binary deployed, inotifywait running (as applicable) |
 | 7 - Reproduction | `workspace/results.json` | File exists, valid JSON, each entry has `vuln_id`, `status`, and `validation_result` |
