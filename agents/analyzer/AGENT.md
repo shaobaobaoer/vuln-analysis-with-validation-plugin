@@ -198,6 +198,8 @@ The final `vulnerabilities[]` array MUST contain **at most 5 findings**. If more
 - Move the remainder to `excluded_findings[]` with reason `"Volume cap: lower priority than top 5 findings"`
 - This cap prevents report inflation and ensures every reported finding is well-evidenced
 
+**MANDATORY SELF-CHECK before writing output**: Count the entries you are about to write to `vulnerabilities[]`. If `len(vulnerabilities) > 5`, STOP — move the lowest-ranked entries to `excluded_findings[]` until the count is exactly 5. Writing 6 or more entries is a hard error. This check is non-negotiable.
+
 **Phase 3g — Prioritization**:
 Rank by: severity > reachability > exploitability > impact > confidence (threshold >= 7)
 
@@ -370,6 +372,10 @@ The output MUST be a **wrapper object** with metadata — NEVER a flat array of 
 
 // FORBIDDEN — missing attacker_preconditions on insecure_deserialization finding
 {"type": "insecure_deserialization", "entry_point": {...}}  // no attacker_preconditions key
+
+// FORBIDDEN — attacker_preconditions = null (null is NOT acceptable; must be "none" or a description)
+{"type": "insecure_deserialization", "attacker_preconditions": null}
+{"type": "arbitrary_file_rw", "attacker_preconditions": null}
 
 // FORBIDDEN — more than 5 findings in vulnerabilities[] array
 {"vulnerabilities": [{...}, {...}, {...}, {...}, {...}, {...}]}  // 6 entries: FORBIDDEN

@@ -43,4 +43,4 @@ docker-compose.override.yml
 evidence/
 
 # Analyzer run artifacts (logs, workspace dirs, scripts, CSVs from pipeline runs)
-analyzer/
+/analyzer/

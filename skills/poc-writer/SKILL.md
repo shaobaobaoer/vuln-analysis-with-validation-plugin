@@ -195,6 +195,8 @@ poc_sql_injection_001.py         # WRONG: sql_injection is not a supported type
 poc_RCE_001.py                   # WRONG: uppercase type
 poc_dos_002_v2.py                # WRONG: "_v2" suffix (create a new NNN instead of versioning)
 poc_rce_002_v2.py                # WRONG: "_v2" suffix (use poc_rce_003.py for next attempt)
+poc_ssrf_retry.py                # WRONG: "_retry" suffix with no number at all
+poc_rce_003_retry.py             # WRONG: "_retry" suffix appended after number
 ```
 
 **The ONLY valid pattern is**: `poc_<type>_<NNN>.py` where `<type>` is exactly one of `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection` and `<NNN>` is a 3-digit zero-padded number.
@@ -208,7 +210,7 @@ The `workspace/poc_scripts/` directory MUST contain **only** `poc_<type>_<NNN>.p
 **FORBIDDEN in poc_scripts/**:
 - `auth_helper.py`, `utils.py`, `common.py` — helper modules belong in `workspace/` root
 - `test_server.py`, `mock_*.py` — test harnesses belong in `workspace/` root
-- `poc_dos_002_v2.py`, `poc_rce_003_retry.py` — version-suffix retry artifacts
+- `poc_dos_002_v2.py`, `poc_rce_003_retry.py`, `poc_ssrf_retry.py` — version/retry-suffix artifacts (any `_v2`, `_v3`, `_retry`, `_fix`, `_new` suffix is forbidden)
 
 **Retry artifacts**: When a PoC fails and requires rewriting, the new version replaces the old file at the same path (`poc_rce_001.py` → overwrite in place). Do NOT create `poc_rce_001_v2.py`. If multiple fundamentally different attack vectors must be tested, use a new sequential number (`poc_rce_002.py`).
 
