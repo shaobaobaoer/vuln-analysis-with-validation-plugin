@@ -295,6 +295,185 @@ class CommandInjectionValidator(BaseValidator):
 
 
 # ---------------------------------------------------------------------------
+# 7. SQL Injection
+# ---------------------------------------------------------------------------
+class SQLInjectionValidator(BaseValidator):
+    """Confirms SQL injection via error-based, time-based, or union-based evidence.
+
+    Evidence is gathered entirely from HTTP response analysis — no direct DB
+    connections are permitted (that would bypass the target app's auth layer).
+    """
+
+    SQL_ERROR_PATTERNS = [
+        r"you have an error in your sql syntax",
+        r"syntax error at or near",
+        r"ORA-\d{4,5}:",                        # Oracle
+        r"unclosed quotation mark",              # MSSQL
+        r"microsoft.*odbc.*sql server.*driver",  # MSSQL via ODBC
+        r"pg_query\(\):",                        # PostgreSQL PHP
+        r"invalid input syntax for type",        # PostgreSQL
+        r"sqlite.*error",                        # SQLite
+        r"SQLSTATE\[\d+\]",                      # Generic PDO
+        r"near\s+[\"']\S+[\"']:\s+syntax error", # SQLite near-syntax
+        r"quoted string not properly terminated", # Oracle
+        r"SQLI_CONFIRMED",                        # Explicit marker in union-based PoC
+    ]
+
+    @property
+    def vuln_type(self) -> str:
+        return "sql_injection"
+
+    def validate(self, response: dict[str, Any]) -> ValidationResult:
+        stdout = self._safe_get(response, "stdout")
+        stderr = self._safe_get(response, "stderr")
+        combined = f"{stdout}\n{stderr}"
+
+        # Error-based or union-based confirmation
+        for pat in self.SQL_ERROR_PATTERNS:
+            match = re.search(pat, combined, re.IGNORECASE)
+            if match:
+                return ValidationResult(
+                    status=ValidationStatus.CONFIRMED,
+                    evidence=match.group(0),
+                    details={"technique": "error-based or union-based", "pattern_matched": pat},
+                )
+
+        # Time-based blind: PoC reports timing ratio
+        time_match = re.search(
+            r"time[_\s-]*based.*?(\d+\.?\d*)\s*(?:x|times|×)\s*baseline",
+            combined, re.IGNORECASE
+        )
+        if time_match:
+            ratio_str = time_match.group(1)
+            try:
+                ratio = float(ratio_str)
+                if ratio >= 4.0:
+                    return ValidationResult(
+                        status=ValidationStatus.CONFIRMED,
+                        evidence=f"Time-based blind SQLi: {ratio:.1f}× baseline",
+                        details={"technique": "time-based", "ratio": ratio},
+                    )
+            except ValueError:
+                pass
+
+        # Boolean-based: PoC reports byte difference
+        bool_match = re.search(
+            r"boolean[_\s-]*based.*?diff\s*=\s*(-?\d+)",
+            combined, re.IGNORECASE
+        )
+        if bool_match:
+            diff = abs(int(bool_match.group(1)))
+            if diff >= 50:
+                return ValidationResult(
+                    status=ValidationStatus.CONFIRMED,
+                    evidence=f"Boolean-based SQLi: response diff = {diff} bytes",
+                    details={"technique": "boolean-based", "diff_bytes": diff},
+                )
+
+        return ValidationResult(status=ValidationStatus.NOT_REPRODUCED)
+
+
+# ---------------------------------------------------------------------------
+# 8. Cross-Site Scripting (XSS)
+# ---------------------------------------------------------------------------
+class XSSValidator(BaseValidator):
+    """Confirms XSS by finding an unescaped unique marker in the HTML response.
+
+    PoC scripts should inject a unique token (e.g. xss_<hex>) and check that
+    it appears in the response body without HTML entity escaping.
+    """
+
+    XSS_MARKER_PATTERN = r"xss_[a-f0-9]{8,}"
+    HTML_ENTITIES = re.compile(r"&(?:lt|gt|amp|quot|#39|apos);")
+
+    @property
+    def vuln_type(self) -> str:
+        return "xss"
+
+    def validate(self, response: dict[str, Any]) -> ValidationResult:
+        stdout = self._safe_get(response, "stdout")
+        stderr = self._safe_get(response, "stderr")
+        combined = f"{stdout}\n{stderr}"
+
+        # Look for explicit XSS confirmation output from PoC
+        if re.search(r"XSS_CONFIRMED|xss[_\s-]*confirmed", combined, re.IGNORECASE):
+            marker_match = re.search(self.XSS_MARKER_PATTERN, combined, re.IGNORECASE)
+            evidence = marker_match.group(0) if marker_match else "XSS_CONFIRMED marker"
+            return ValidationResult(
+                status=ValidationStatus.CONFIRMED,
+                evidence=f"XSS confirmed: {evidence} found unescaped in response",
+                details={"source": "PoC output"},
+            )
+
+        # Look for the marker pattern itself in output
+        marker_match = re.search(self.XSS_MARKER_PATTERN, combined, re.IGNORECASE)
+        if marker_match:
+            # Verify the surrounding context is not HTML-escaped
+            marker_pos = combined.find(marker_match.group(0))
+            context_window = combined[max(0, marker_pos - 50): marker_pos + 80]
+            if not self.HTML_ENTITIES.search(context_window):
+                return ValidationResult(
+                    status=ValidationStatus.CONFIRMED,
+                    evidence=f"Marker {marker_match.group(0)} found unescaped in HTML response",
+                    details={"context": context_window[:100]},
+                )
+
+        return ValidationResult(status=ValidationStatus.NOT_REPRODUCED)
+
+
+# ---------------------------------------------------------------------------
+# 9. IDOR (Insecure Direct Object Reference)
+# ---------------------------------------------------------------------------
+class IDORValidator(BaseValidator):
+    """Confirms IDOR by detecting successful cross-user resource access.
+
+    PoC scripts register two users and attempt to access user2's resource
+    using user1's credentials. Success is indicated by HTTP 200 with
+    user2's data in the response.
+    """
+
+    IDOR_PATTERNS = [
+        r"IDOR_CONFIRMED",
+        r"idor[_\s-]*confirmed",
+        r"cross[_\s-]*user[_\s-]*access[_\s-]*(?:successful|confirmed)",
+        r"horizontal[_\s-]*privilege[_\s-]*escalation[_\s-]*(?:confirmed|successful)",
+        r"accessed\s+(?:resource|data)\s+of\s+(?:another|different)\s+user",
+    ]
+
+    @property
+    def vuln_type(self) -> str:
+        return "idor"
+
+    def validate(self, response: dict[str, Any]) -> ValidationResult:
+        stdout = self._safe_get(response, "stdout")
+        stderr = self._safe_get(response, "stderr")
+        combined = f"{stdout}\n{stderr}"
+
+        for pat in self.IDOR_PATTERNS:
+            match = re.search(pat, combined, re.IGNORECASE)
+            if match:
+                return ValidationResult(
+                    status=ValidationStatus.CONFIRMED,
+                    evidence=match.group(0),
+                    details={"pattern_matched": pat},
+                )
+
+        # Check for PoC reporting HTTP 200 with another user's data
+        http_200_match = re.search(
+            r"http[_\s-]*(?:code|status)[_\s-]*(?:=|:)\s*200.*?(?:user2|idor_poc_b|target_user)",
+            combined, re.IGNORECASE | re.DOTALL
+        )
+        if http_200_match:
+            return ValidationResult(
+                status=ValidationStatus.CONFIRMED,
+                evidence="HTTP 200 returned with target user's data",
+                details={"source": "PoC response analysis"},
+            )
+
+        return ValidationResult(status=ValidationStatus.NOT_REPRODUCED)
+
+
+# ---------------------------------------------------------------------------
 # Auto-registration
 #
 # Each concrete validator declares its own VULN_TYPE class constant so we
@@ -307,6 +486,9 @@ _ALL_VALIDATORS: list[tuple[str, type[BaseValidator]]] = [
     ("arbitrary_file_rw", ArbitraryFileRWValidator),
     ("dos", DoSValidator),
     ("command_injection", CommandInjectionValidator),
+    ("sql_injection", SQLInjectionValidator),
+    ("xss", XSSValidator),
+    ("idor", IDORValidator),
 ]
 
 for _vuln_type, _cls in _ALL_VALIDATORS:

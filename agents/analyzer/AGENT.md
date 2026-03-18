@@ -220,6 +220,9 @@ For each raw finding, trace the call chain from the vulnerable code BACK to a pu
    - The measured response time difference is < 5x baseline (e.g., 0.002s vs 0.001s)
    - The attack requires flooding (many concurrent requests) rather than a single crafted payload
    - The finding is "missing rate limiting" — this is NOT a DoS vulnerability
+9. **SQL Injection Quality Gate**: A finding is NOT sql_injection unless user-controlled input flows into a SQL string **without parameterization**. Exclude if parameterized queries are used (`cursor.execute("... %s", (val,))`), ORM uses `.filter_by()` without `.raw()`, or the only SQL is in migration files. See `filtering-rules.md §SQL Injection Quality Gate` (rule #28).
+10. **XSS Quality Gate**: A finding is NOT xss unless user-controlled content reaches an HTML response **without escaping** in an auto-executing context. Exclude if the framework auto-escapes (Jinja2 default, React JSX, Angular), the response is JSON-only, or the XSS requires victim action beyond normal browsing (self-XSS). See `filtering-rules.md §XSS Quality Gate` (rule #29).
+11. **IDOR Quality Gate**: A finding is NOT idor unless: (a) the ID is integer/sequential (not UUID), (b) no ownership check exists (`Model.objects.get(pk=id)` without `.filter(user=request.user)`), (c) the endpoint is user-specific (not shared/public). Admin endpoints and UUID-keyed resources are EXCLUDED. See `filtering-rules.md §IDOR Quality Gate` (rule #30).
 
 **Phase 3d — Per-Finding Disclosure Matching** (run AFTER filtering, findings exist now):
 
@@ -279,23 +282,25 @@ Rank by: severity > reachability > exploitability > impact > confidence (thresho
 
 ## Supported Vulnerability Types
 
-Every finding in `workspace/vulnerabilities.json` MUST have its `type` field set to one of these 8 supported types:
+Every finding in `workspace/vulnerabilities.json` MUST have its `type` field set to one of these 9 supported types:
 
-`rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss`
+`rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss`, `idor`
 
 **Type scope by target type**:
-- `webapp`: all 8 types
+- `webapp`: all 9 types (idor only for integer-keyed user-owned resources, not UUID-keyed)
 - `service`: rce, ssrf (if HTTP), insecure_deserialization, arbitrary_file_rw, dos, command_injection, sql_injection
 - `cli`: rce, arbitrary_file_rw, dos, command_injection
 - `library`: dos, command_injection, insecure_deserialization (network-receiving only)
 
 > **Full type mapping**: See `skills/type-mapping.md` for comprehensive descriptive-name → type-key mapping, EXCLUDE list, and all observed variations.
 
-**CRITICAL**: The `type` field MUST be the exact lowercase key (e.g., `rce`), NEVER a descriptive English name. If a finding cannot be mapped to one of the 8 types, EXCLUDE it and place in `excluded_findings[]`.
+**CRITICAL**: The `type` field MUST be the exact lowercase key (e.g., `rce`), NEVER a descriptive English name. If a finding cannot be mapped to one of the 9 types, EXCLUDE it and place in `excluded_findings[]`.
 
 **sql_injection scope**: Valid for webapp/service targets with a backend database. Validate with error-based, time-based blind, or boolean-based techniques via the target's HTTP interface. See `skills/validate-sql-injection/SKILL.md`.
 
 **xss scope**: Valid for webapp targets only. Only auto-triggering XSS (reflected on normal navigation, or stored that fires on page load). Self-XSS and non-auto-triggering XSS are EXCLUDED. See `skills/validate-xss/SKILL.md`.
+
+**idor scope**: Valid for webapp targets only. Requires integer/sequential ID and missing ownership check. UUID-keyed resources EXCLUDED (Precedent #2). See `skills/validate-idor/SKILL.md`.
 
 ## Output Schemas (MANDATORY — must match exactly)
 
