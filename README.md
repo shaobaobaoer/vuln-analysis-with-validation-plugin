@@ -63,7 +63,7 @@ All PoC scripts and Python execution happen **inside Docker containers**. Nothin
 The plugin includes a mandatory 3-phase code audit process at `skills/code-security-review/`:
 
 1. **Audit** — Context research, comparative analysis, vulnerability assessment
-2. **Filter** — Hard exclusion regex, AI filtering (28 rules), precedent check (22+ rules), confidence scoring (threshold >= 7)
+2. **Filter** — Hard exclusion regex, AI filtering (30 rules incl. JNDI + PP language-gated quality gates), precedent check (22+ rules), confidence scoring (threshold >= 7)
 3. **Report** — Filter summary table, detailed findings, excluded findings list
 
 ## Architecture
