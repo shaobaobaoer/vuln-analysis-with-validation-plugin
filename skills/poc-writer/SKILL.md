@@ -360,7 +360,7 @@ poc_001_path_traversal_delete.py # WRONG: number before type, descriptive suffix
 poc_001_pickle_rce.py            # WRONG: number before type, descriptive suffix
 poc_001_auth_bypass.py           # WRONG: number before type, auth_bypass unsupported
 poc_path_traversal_001.py        # WRONG: path_traversal is not a type (use arbitrary_file_rw)
-poc_sql_injection_001.py         # WRONG: sql_injection is not a supported type
+poc_sql_injection_001.py         # CORRECT: valid name — sql_injection IS a supported type
 poc_RCE_001.py                   # WRONG: uppercase type
 poc_dos_002_v2.py                # WRONG: "_v2" suffix (create a new NNN instead of versioning)
 poc_rce_002_v2.py                # WRONG: "_v2" suffix (use poc_rce_003.py for next attempt)
@@ -370,7 +370,7 @@ poc_rce_003_retry.py             # WRONG: "_retry" suffix appended after number
 
 **The ONLY valid pattern is**: `poc_<type>_<NNN>.py` where `<type>` is exactly one of `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss` and `<NNN>` is a 3-digit zero-padded number.
 
-The `<type>` MUST be an exact match to one of: `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`.
+The `<type>` MUST be an exact match to one of: `rce`, `ssrf`, `insecure_deserialization`, `arbitrary_file_rw`, `dos`, `command_injection`, `sql_injection`, `xss`, `idor`.
 
 ## poc_scripts/ Directory Rules
 
