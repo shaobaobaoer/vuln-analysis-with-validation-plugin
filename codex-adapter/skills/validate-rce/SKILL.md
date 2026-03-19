@@ -12,6 +12,12 @@ Confirm whether a vulnerability allows arbitrary code execution on the server by
 
 - An RCE vulnerability needs validation during reproduction (Step 7/8)
 
+## Resource Loading (on-demand)
+
+| Resource | Load when |
+|----------|-----------|
+| `resources/template-engine-rce.md` | The `rce` finding depends on template rendering, expression evaluation, or sandbox escape |
+
 ## Prerequisites (set up before PoC execution)
 
 ```bash

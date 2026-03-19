@@ -73,11 +73,11 @@ Each pipeline stage activates a SPECIFIC, LIMITED set of skills. No skill should
 | **Step 1** | Target Extraction | `skills/target-extraction/SKILL.md` only | All validators, vuln scanner, poc-writer, reporter |
 | **Step 2** | Environment Setup | `skills/environment-builder/SKILL.md` + sub-modules (`app/`, `db/`, `helpers/`) | Validators, vuln scanner, poc-writer, reporter |
 | **Step 3** | Docker Readiness Gate | Docker CLI commands only (`docker ps`, `curl` health check) | All analysis skills |
-| **Step 4** | Vulnerability Analysis | `skills/vulnerability-scanner/SKILL.md` + `skills/code-security-review/SKILL.md` + `skills/template-engine-rce/SKILL.md` when template rendering or sandbox escape is in scope | All `validate-*` skills, poc-writer, reporter |
-| **Step 5** | PoC Generation | `skills/poc-writer/SKILL.md` + `skills/template-engine-rce/SKILL.md` for template-derived `rce` only | All `validate-*` skills, reporter |
+| **Step 4** | Vulnerability Analysis | `skills/vulnerability-scanner/SKILL.md` + `skills/code-security-review/SKILL.md` with their embedded `resources/template-engine-rce.md` guidance when template rendering or sandbox escape is in scope | All `validate-*` skills, poc-writer, reporter |
+| **Step 5** | PoC Generation | `skills/poc-writer/SKILL.md` with its embedded `resources/template-engine-rce.md` guidance for template-derived `rce` only | All `validate-*` skills, reporter |
 | **Step 6** | Environment Init | Docker CLI only (TCP listeners, trigger binary, inotifywait) | All analysis + reporting skills |
-| **Step 7** | Reproduction | `skills/validate-<type>/SKILL.md` matching each vuln's type — ONE validator per vuln; add `skills/template-engine-rce/SKILL.md` when template payloads matter | vuln scanner, poc-writer, reporter |
-| **Step 8** | Retry Loop | `skills/validate-<type>/SKILL.md` + `skills/poc-writer/SKILL.md` (rewrite failed PoC only) + `skills/template-engine-rce/SKILL.md` for template-derived `rce` | reporter |
+| **Step 7** | Reproduction | `skills/validate-<type>/SKILL.md` matching each vuln's type — ONE validator per vuln; for template-derived `rce`, load the embedded `resources/template-engine-rce.md` guidance from `validate-rce` | vuln scanner, poc-writer, reporter |
+| **Step 8** | Retry Loop | `skills/validate-<type>/SKILL.md` + `skills/poc-writer/SKILL.md` (rewrite failed PoC only); for template-derived `rce`, keep using the embedded `resources/template-engine-rce.md` guidance | reporter |
 | **Step 9** | Report | Reporter agent + `agents/reporter/AGENT.md` | All other skills |
 
 ### Stage-Activation Rules (ENFORCED)

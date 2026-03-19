@@ -14,6 +14,12 @@ Generate standalone Proof-of-Concept exploit scripts for identified vulnerabilit
 - The `/poc-gen` command is invoked
 - The `/vuln-scan` pipeline reaches Step 5 (PoC Generation)
 
+## Resource Loading (on-demand)
+
+| Resource | Load when |
+|----------|-----------|
+| `resources/template-engine-rce.md` | An `rce` finding is sourced from template rendering, expression evaluation, or sandbox escape |
+
 ## Script Requirements
 
 Each PoC script MUST:

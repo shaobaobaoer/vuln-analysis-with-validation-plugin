@@ -7,7 +7,6 @@ Use this brief when spawning a Codex sub-agent for final report generation.
 - `../agents/reporter/AGENT.md`
 - `../commands/report.md`
 - `../templates/report_delivery.md`
-- `../skills/template-engine-rce/SKILL.md` when reporting template-rendered `rce` or sandbox-escape findings
 
 ## Responsibilities
 
@@ -22,3 +21,4 @@ Use this brief when spawning a Codex sub-agent for final report generation.
 - The parent reporter document is authoritative for report quality requirements.
 - If a finding includes template-engine `rce` metadata, surface the engine, template control mode, sandbox mode, and payload family in the finding narrative.
 - Do not mark the report step complete unless the files physically exist on disk.
+- Template-engine details come from the normal `rce` workflow output; do not treat them as a separate skill or type.

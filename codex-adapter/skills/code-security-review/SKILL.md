@@ -29,13 +29,14 @@ origin: vuln-analysis
 
 ## Skill Resources
 
-Before starting, you MUST read ALL of the following:
+Before starting, you MUST read the mandatory resources below and any conditional resources that apply:
 
 | Resource | Path | Read Requirement |
 |----------|------|-----------------|
 | Audit Prompt | `skills/code-security-review/resources/audit-prompt.md` | MUST read before Phase 1 |
 | Hard Exclusion Patterns | `skills/code-security-review/resources/hard-exclusion-patterns.md` | MUST read before Phase 2 |
 | False Positive Filtering Rules | `skills/code-security-review/resources/filtering-rules.md` | MUST read before Phase 2 |
+| Template-Engine RCE Guide | `skills/code-security-review/resources/template-engine-rce.md` | Read when an `rce` candidate is sourced from template rendering, expression evaluation, or sandbox escape |
 | Customization Guide | `skills/code-security-review/resources/customization-guide.md` | Read if project-specific rules needed |
 
 ---
@@ -74,6 +75,7 @@ Examine code for these security categories:
 
 **Injection & Code Execution:**
 - RCE via deserialization, pickle injection, YAML deserialization, eval injection, XSS
+- Template-engine `rce` and sandbox escape: attacker-controlled template source or expression text reaching render, compile, parse, or evaluate sinks. Keep these under `rce`; exclude template-name-only and data-only cases.
 - **JNDI Injection** (Java only): User input flowing into Log4j logger calls (`logger.info(userInput)`) with Log4j 2 < 2.17.0 — triggers JNDI LDAP/RMI lookups → remote class loading → RCE. Map to `jndi_injection`. Search for `logger.info`, `logger.error`, `logger.warn`, `logger.debug` receiving HTTP header values or request parameters directly. Reference CVE-2021-44228 (Log4Shell).
 - **Prototype Pollution** (JS/TS only): Untrusted input reaching unsafe deep merge/clone without `__proto__`/`constructor` key filtering (`_.merge`, `jQuery.extend(true,...)`, custom recursive merge). Check for downstream RCE gadgets in EJS (`outputFunctionName`), Pug (`block`), Handlebars. Map to `prototype_pollution`.
 
@@ -214,7 +216,15 @@ A finding is NOT IDOR unless a user-controlled ID retrieves another user's resou
 
 **Evidence required**: Confirm Python language, trace HTTP/socket input to `pickle.loads()` call site, confirm no base64 is used as security (it is not — only transport encoding).
 
-### Step 2c-vii — Intended Functionality Check
+### Step 2c-vii — Template Engine RCE Gate (apply to `rce` candidates sourced from template rendering or expression evaluation)
+
+Load and apply `resources/template-engine-rce.md`.
+
+- KEEP only when attacker-controlled template source or expression text reaches a render, compile, parse, or evaluate sink.
+- KEEP sandboxed engines only when a concrete escape path or dangerous runtime context is visible.
+- EXCLUDE template-name-only, view-name-only, data-only, and raw HTML / escaping bypass cases that are really `xss`.
+
+### Step 2c-viii — Intended Functionality Check
 
 Assess whether the exploitable behavior **exceeds the designed purpose** of the API. If the API is designed to perform the "dangerous" operation (e.g., `download_from_url()` fetching arbitrary URLs), the finding is by design — not a vulnerability. Apply rules from `resources/filtering-rules.md §Intended Functionality Exclusion`.
 

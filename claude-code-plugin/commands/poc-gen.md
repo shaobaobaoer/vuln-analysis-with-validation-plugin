@@ -16,7 +16,7 @@ Generate PoC scripts for vulnerabilities listed in `workspace/vulnerabilities.js
 
 1. Read `workspace/vulnerabilities.json`
 2. Use `skills/poc-writer/SKILL.md` for script generation patterns
-   - If an `rce` finding comes from template rendering or sandbox escape, also use `skills/template-engine-rce/SKILL.md`
+   - If an `rce` finding comes from template rendering or sandbox escape, keep the flow inside `skills/poc-writer/SKILL.md` and load `resources/template-engine-rce.md`
 3. For each vulnerability, generate a standalone Python script:
    - Naming: `poc_<type>_<NNN>.py` (3-digit zero-padded, e.g. `poc_rce_001.py`)
    - Args: `--target`, `--timeout`

@@ -14,7 +14,7 @@ The workflow is still instruction-first. The main behavior is driven by local do
 - `./CLAUDE.md`: root workflow rules and safety invariants
 - `./commands/*.md`: copied workflow entrypoints aligned with the Claude command set
 - `./agents/*/AGENT.md`: copied agent prompts for orchestrator, analyzer, builder, exploiter, and reporter
-- `./skills/*/SKILL.md`: copied operational skills plus Codex-only overlays
+- `./skills/*/SKILL.md`: copied operational skills plus Codex-side refinements inside the existing workflow
 - `./templates/*.md`: local prompt templates used by the workflow
 - `./core/`: helper runtime code for orchestration, validation, and reporting
 - `./AGENTS.md`: Codex-specific skill catalog and operating rules
@@ -42,14 +42,15 @@ The Codex subproject adds three layers on top of the copied workflow:
 
 ## New Capability: Template Engine RCE Coverage
 
-This subproject includes `skills/template-engine-rce/`, a local overlay for:
+Template-engine coverage now lives inside the existing `rce` workflow instead of a standalone skill.
+The Codex subproject loads template-engine guidance on demand from:
 
-- SSTI and render-from-string paths
-- template sandbox escape candidates
-- user-controlled expression-string evaluation
-- engine-specific PoC generation and validation guidance
+- `skills/vulnerability-scanner/resources/template-engine-rce.md`
+- `skills/code-security-review/resources/template-engine-rce.md`
+- `skills/poc-writer/resources/template-engine-rce.md`
+- `skills/validate-rce/resources/template-engine-rce.md`
 
-The overlay keeps the final vulnerability type as `rce`, but improves classification and filtering with:
+This keeps the final vulnerability type as `rce`, while improving classification and filtering with:
 
 - `engine`
 - `template_control`
@@ -68,7 +69,7 @@ It also explicitly excludes common false positives:
 1. Open Codex in `codex-adapter/`.
 2. Start from one of the prompt packs in `./prompts/`.
 3. Let Codex follow the local workflow documents under `./CLAUDE.md`, `./commands/`, `./agents/`, and `./skills/`.
-4. Keep Codex-specific adjustments in `./prompts/`, `./roles/`, and local overlay skills unless you explicitly want to change the Claude subproject too.
+4. Keep Codex-specific adjustments in `./prompts/`, `./roles/`, and local skill resources unless you explicitly want to change the Claude subproject too.
 
 ## Prompt Packs
 
@@ -101,7 +102,7 @@ codex-adapter/
 │   ├── vulnerability-scanner/
 │   ├── poc-writer/
 │   ├── validate-*/
-│   └── template-engine-rce/
+│   └── ...
 ├── templates/
 └── core/
 ```

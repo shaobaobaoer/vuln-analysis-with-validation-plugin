@@ -28,4 +28,4 @@ Use this brief when spawning a Codex sub-agent to coordinate the full vulnerabil
 - Mirror the original architecture with `spawn_agent`.
 - Pass the relevant role brief plus the local copied `AGENT.md` file path to each sub-agent.
 - Prefer local Codex subproject files for workflow changes; edit the separate Claude subproject only when the user explicitly asks to change it too.
-- If template-engine `rce` or sandbox escape is in scope, include `../skills/template-engine-rce/SKILL.md` in the delegated context for analyzer, exploiter, and reporter roles.
+- If template-engine `rce` or sandbox escape is in scope, make sure analyzer, exploiter, and reporter load the embedded `resources/template-engine-rce.md` guidance from their parent `rce` workflow skills.

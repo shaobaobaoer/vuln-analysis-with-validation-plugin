@@ -202,6 +202,8 @@ A finding is **NOT XSS** unless user-controlled content is rendered in an HTML r
 
 **Evidence required**: Point to the exact line where user input is rendered into HTML context without escaping. Must be server-side rendering, not client-side only. Include the Content-Type and template context.
 
+**Template-engine crossover**: If user input becomes template source or expression text rather than plain HTML data, map the candidate to `rce` and apply `resources/template-engine-rce.md`. Template-name-only and fixed-template data-only cases are not template-engine `rce`.
+
 30. **IDOR Quality Gate** (apply to ALL idor candidates):
 
 A finding is **NOT IDOR** unless there is direct evidence that a user-controlled ID is used to access another user's resource **without an ownership check**. Auto-exclude if:

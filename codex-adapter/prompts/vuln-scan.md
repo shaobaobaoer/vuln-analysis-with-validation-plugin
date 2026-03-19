@@ -10,11 +10,10 @@ Use this file as the Codex equivalent of the original Claude `/vuln-scan` comman
 4. `../skills/target-extraction/SKILL.md`
 5. `../skills/environment-builder/SKILL.md`
 6. `../skills/vulnerability-scanner/SKILL.md`
-7. `../skills/template-engine-rce/SKILL.md` when template rendering, SSTI, or sandbox escape patterns are in scope
-8. `../skills/code-security-review/SKILL.md`
-9. `../skills/poc-writer/SKILL.md`
-10. The specific `../skills/validate-*/SKILL.md` files needed for each finding type
-11. `../roles/orchestrator.md`
+7. `../skills/code-security-review/SKILL.md`
+8. `../skills/poc-writer/SKILL.md`
+9. The specific `../skills/validate-*/SKILL.md` files needed for each finding type
+10. `../roles/orchestrator.md`
 
 ## Codex Execution Contract
 
@@ -28,6 +27,7 @@ Use this file as the Codex equivalent of the original Claude `/vuln-scan` comman
 - Keep `workspace/pipeline_state.json` aligned with the documented 9-step state shape.
 - Abort immediately if Docker is unavailable; do not fall back to host execution.
 - Keep original plugin files read-only. Write runtime artifacts only to `workspace/` unless the user asks for something else.
+- When template rendering, SSTI, or sandbox escape is in scope, use the parent `rce` skills and let them load their embedded `resources/template-engine-rce.md` guidance. Do not treat template-engine `rce` as a standalone skill or type.
 
 ## Expected Outputs
 

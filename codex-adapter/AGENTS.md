@@ -23,11 +23,10 @@ A skill is a set of local instructions to follow that is stored in a `SKILL.md` 
 
 - `target-extraction`: Detect target type, language, framework, and public entry points, then write `workspace/target.json`. (file: `./skills/target-extraction/SKILL.md`)
 - `environment-builder`: Detect stack, build Docker environment, verify health, and write `ENVIRONMENT_SETUP.md`. (file: `./skills/environment-builder/SKILL.md`)
-- `vulnerability-scanner`: Perform CVE lookup and static discovery with reachability and confidence scoring. (file: `./skills/vulnerability-scanner/SKILL.md`)
-- `code-security-review`: Run the mandatory audit-filter-report pass that removes false positives. (file: `./skills/code-security-review/SKILL.md`)
-- `poc-writer`: Generate standalone PoC scripts, manifests, and canonical result records. (file: `./skills/poc-writer/SKILL.md`)
-- `template-engine-rce`: Codex-side overlay for SSTI, template sandbox escape, and template-string-controlled render/compile paths that lead to command execution. Use alongside scanner/review/poc/validate-rce when template source or expression strings are attacker-controlled. (file: `./skills/template-engine-rce/SKILL.md`)
-- `validate-rce`: Validate remote code execution through the real target path. (file: `./skills/validate-rce/SKILL.md`)
+- `vulnerability-scanner`: Perform CVE lookup and static discovery with reachability and confidence scoring. Includes on-demand template-engine `rce` discovery guidance under the existing `rce` type. (file: `./skills/vulnerability-scanner/SKILL.md`)
+- `code-security-review`: Run the mandatory audit-filter-report pass that removes false positives. Includes template-engine `rce` filtering under the existing `rce` type. (file: `./skills/code-security-review/SKILL.md`)
+- `poc-writer`: Generate standalone PoC scripts, manifests, and canonical result records. Includes template-engine `rce` payload guidance for `rce` findings that originate from rendering or sandbox escape. (file: `./skills/poc-writer/SKILL.md`)
+- `validate-rce`: Validate remote code execution through the real target path. Includes template-engine validation guidance for `rce` findings that originate from rendering or sandbox escape. (file: `./skills/validate-rce/SKILL.md`)
 - `validate-ssrf`: Validate outbound server-side request forgery with callback evidence. (file: `./skills/validate-ssrf/SKILL.md`)
 - `validate-insecure-deserialization`: Validate non-pickle insecure deserialization findings. (file: `./skills/validate-insecure-deserialization/SKILL.md`)
 - `validate-arbitrary-file-rw`: Validate arbitrary file read or write behavior and evidence. (file: `./skills/validate-arbitrary-file-rw/SKILL.md`)
@@ -44,7 +43,7 @@ A skill is a set of local instructions to follow that is stored in a `SKILL.md` 
 
 - After deciding to use a skill, open its `SKILL.md` and read only the parts needed for the current task.
 - Prefer the copied local skill documents under `./skills/` over re-explaining their guidance in new files.
-- Use `./skills/template-engine-rce/SKILL.md` as an override layer when the task involves SSTI, template sandbox escape, Jinja2/Mako/FreeMarker/Velocity/Thymeleaf/EJS/Pug/Nunjucks/Handlebars, or user-controlled template strings.
+- When the task involves SSTI, template sandbox escape, or user-controlled template strings, use the existing `rce` workflow skills and let them load their own `resources/template-engine-rce.md` guidance on demand.
 - Use the minimal skill set that covers the request. For a full scan this is usually `target-extraction`, `environment-builder`, `vulnerability-scanner`, `code-security-review`, `poc-writer`, and one or more `validate-*` skills.
 - Respect the original stage gates: scanning belongs to Step 4, PoC writing to Step 5 or retry rewrites, validators to Steps 7-8, and reporting to Step 9.
 - If the user names a workflow such as `vuln-scan`, `env-setup`, `poc-gen`, `reproduce`, or `report`, open the matching prompt pack in `./prompts/` first.

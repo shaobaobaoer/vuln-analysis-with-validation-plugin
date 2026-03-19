@@ -23,7 +23,7 @@ You are a security research specialist. You analyze GitHub repositories to ident
 - `skills/target-extraction/SKILL.md` — Target identification methodology
 - `skills/vulnerability-scanner/SKILL.md` — Vulnerability discovery with integrated filtering
 - `skills/code-security-review/SKILL.md` — Mandatory 3-phase code audit process
-- `skills/template-engine-rce/SKILL.md` — Use when template rendering, SSTI, expression-evaluation, or sandbox escape paths are in scope
+- Use the embedded `resources/template-engine-rce.md` guidance from the scanner and review skills when template rendering, SSTI, expression-evaluation, or sandbox escape paths are in scope
   - `resources/audit-prompt.md` — Audit methodology and severity guidelines
   - `resources/filtering-rules.md` — 33 filtering rules (Rules 1-27: general hard exclusions; Rules 28-33: type-specific quality gates for sqli/xss/idor/jndi/pp/pickle), 22 precedents, confidence scoring
   - `resources/hard-exclusion-patterns.md` — Regex-based auto-exclusion patterns
@@ -196,7 +196,7 @@ Follow the mandatory 3-phase process from `skills/code-security-review/SKILL.md`
 - `requests.get(user_url)` → SSRF
 - Shell string concatenation → Command Injection
 - Unbounded regex/loops → DoS
-- User-controlled template source or expression evaluation → `rce` (use `skills/template-engine-rce/SKILL.md` and exclude template-name-only or data-only cases)
+- User-controlled template source or expression evaluation → `rce` (use the embedded `resources/template-engine-rce.md` guidance and exclude template-name-only or data-only cases)
 
 **Phase 3b — Entry Point Reachability Assessment** (MANDATORY — never skip):
 For each raw finding, trace the call chain from the vulnerable code BACK to a public entry point:

@@ -8,8 +8,7 @@ Use this file as the Codex equivalent of the original Claude `/poc-gen` command.
 2. `../commands/poc-gen.md`
 3. `../agents/exploiter/AGENT.md`
 4. `../skills/poc-writer/SKILL.md`
-5. `../skills/template-engine-rce/SKILL.md` when an `rce` finding is sourced from template rendering or sandbox escape
-6. `../roles/exploiter.md`
+5. `../roles/exploiter.md`
 
 ## Codex Execution Contract
 
@@ -18,6 +17,7 @@ Use this file as the Codex equivalent of the original Claude `/poc-gen` command.
 - Preserve the naming convention `poc_<type>_<NNN>.py`.
 - Every script must support `--target` and `--timeout`.
 - Validate syntax inside Docker, not on the host.
+- For template-rendered `rce`, keep the flow inside `../skills/poc-writer/SKILL.md` and load its `resources/template-engine-rce.md` guidance instead of using a standalone overlay skill.
 
 ## Expected Outputs
 

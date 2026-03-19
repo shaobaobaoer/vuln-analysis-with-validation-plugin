@@ -9,9 +9,8 @@ Use this file as the Codex equivalent of the original Claude `/reproduce` comman
 3. `../agents/exploiter/AGENT.md`
 4. `../templates/validation_framework.md`
 5. `../skills/poc-writer/SKILL.md`
-6. `../skills/template-engine-rce/SKILL.md` when an `rce` finding depends on a template payload or sandbox escape
-7. The validator skill that matches each finding type
-8. `../roles/exploiter.md`
+6. The validator skill that matches each finding type
+7. `../roles/exploiter.md`
 
 ## Codex Execution Contract
 
@@ -21,6 +20,7 @@ Use this file as the Codex equivalent of the original Claude `/reproduce` comman
 - Use the matching `validate-*` skill for each finding type.
 - Save canonical results to `workspace/results.json`.
 - Never run PoC or validator Python directly on the host.
+- For template-rendered `rce`, keep validation inside `../skills/validate-rce/SKILL.md` and load its `resources/template-engine-rce.md` guidance instead of using a standalone overlay skill.
 
 ## Expected Outputs
 

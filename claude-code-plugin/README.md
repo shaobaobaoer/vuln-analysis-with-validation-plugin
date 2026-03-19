@@ -46,7 +46,13 @@ All PoC scripts and Python execution happen **inside Docker containers**. Nothin
 
 ### Template Engine RCE Coverage
 
-The workflow now has explicit support for template-engine-driven `rce` analysis through `skills/template-engine-rce/`.
+Template-engine coverage now lives inside the existing `rce` workflow instead of a standalone skill.
+The workflow loads template-engine guidance on demand from:
+
+- `skills/vulnerability-scanner/resources/template-engine-rce.md`
+- `skills/code-security-review/resources/template-engine-rce.md`
+- `skills/poc-writer/resources/template-engine-rce.md`
+- `skills/validate-rce/resources/template-engine-rce.md`
 
 This covers:
 
@@ -86,9 +92,9 @@ The plugin includes a mandatory 3-phase code audit process at `skills/code-secur
 2. **Filter** — Hard exclusion regex, AI filtering (30 rules incl. JNDI + PP language-gated quality gates), precedent check (22+ rules), confidence scoring (threshold >= 7)
 3. **Report** — Filter summary table, detailed findings, excluded findings list
 
-### Template Engine RCE Overlay Skill
+### Template Engine RCE Metadata
 
-`skills/template-engine-rce/` is used alongside the scanner, review, PoC writer, and RCE validator to classify:
+The existing `rce` workflow classifies template-engine findings with:
 
 - `engine`
 - `template_control`
@@ -137,7 +143,7 @@ claude-code-plugin/
 │   ├── reproduce.md                       #   /reproduce — run reproduction
 │   └── report.md                          #   /report — generate report
 │
-├── skills/                                # Skill modules (13 skills)
+├── skills/                                # Skill modules
 │   ├── target-extraction/SKILL.md         #   Step 1: target + entry point analysis
 │   ├── environment-builder/               #   Step 2: modular env setup
 │   │   ├── SKILL.md                       #     Detect → Route → Build → Verify → Document
@@ -151,7 +157,6 @@ claude-code-plugin/
 │   │   ├── SKILL.md                       #     Mandatory audit → filter → report
 │   │   └── resources/                     #     Filtering rules, exclusion patterns
 │   ├── poc-writer/SKILL.md                #   Step 5: PoC script patterns
-│   ├── template-engine-rce/               #   Overlay for SSTI / template sandbox escape → RCE
 │   └── validate-*/SKILL.md               #   12 type-specific validators (Steps 7-8; 3 are language-gated)
 │
 ├── agents/                                # Agent definitions
@@ -216,7 +221,7 @@ cd ~/.claude/plugins/vuln-analysis/claude-code-plugin
 
 This runs the complete 9-step pipeline and produces all artifacts in `workspace/`.
 
-When template rendering is attacker-controlled, the pipeline should classify the finding as `rce` and apply the template-engine overlay skill rather than inventing a separate type.
+When template rendering is attacker-controlled, the pipeline should classify the finding as `rce` and load the embedded template-engine guidance inside the existing `rce` workflow rather than inventing a separate type.
 
 ### Individual Steps
 

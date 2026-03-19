@@ -32,7 +32,7 @@ Execute PoC scripts against the Docker-containerized target and verify reproduct
 4. Execute each PoC from `workspace/poc_manifest.json` against `http://localhost:<docker_port>`
 5. **Legitimacy check** — Scan PoC source for forbidden direct-call patterns (anti-cheat)
 6. **Type-specific validation** — Check success condition per vulnerability type
-   - If an `rce` finding depends on a template payload or sandbox escape path, also use `skills/template-engine-rce/SKILL.md`
+   - If an `rce` finding depends on a template payload or sandbox escape path, keep validation inside `skills/validate-rce/SKILL.md` and load `resources/template-engine-rce.md`
 7. For failures, enter retry loop (max 5 per vuln):
    - Re-initialize monitoring (restart listeners, clean markers)
    - Diagnose: ENTRY_POINT_NOT_FOUND / ENV_ISSUE / POC_BUG / PARAM_MISMATCH / TIMING / NOT_VULNERABLE

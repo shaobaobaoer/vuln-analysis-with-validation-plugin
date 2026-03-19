@@ -25,6 +25,8 @@ All vulnerability findings MUST use one of the 12 supported type keys below. The
 
 Arbitrary Code Execution, Arbitrary Code Execution (Safe Mode Bypass), Arbitrary Code Execution (Pickle Bypass), Arbitrary Code Execution (Numpy Pickle), Arbitrary Code Execution (CIFAR cPickle), Arbitrary Code Execution (Marshal Bytecode Injection), Arbitrary Code Execution via Pickle Deserialization, Arbitrary Code Execution via File Write, Remote Code Execution, Remote Code Execution (RCE), remote_code_execution, Code Injection, Code Injection via eval(), code_injection, Template Injection, SSTI (Server-Side Template Injection), SSTI / Code Injection, Prompt Injection / Jinja2 Template Injection, Sandbox Escape, Import Restriction Bypass, Remote Code Execution via Dynamic Module Loading
 
+> **Template-engine scope rule**: SSTI, expression injection, and template sandbox escape stay under `rce`; do NOT create a separate type key. Keep only when the attacker controls template source or expression text, or a concrete sandbox escape path exists. Template-name-only control, view selection, and fixed-template data-only cases are excluded. `Markup`, `mark_safe`, and `|safe` without server-side evaluation stay under `xss`.
+
 ### MAP to `insecure_deserialization`
 
 Insecure Deserialization, insecure deserialization, Insecure Deserialization (RCE), Unsafe Deserialization, unsafe_deserialization, Unsafe Deserialization (HDF5 Legacy Format), Unsafe YAML Loading, yaml_deserialization, Arbitrary Code Execution via Deserialization, Unsafe Deserialization in DataPipe Decoder, deserialization, ObjectInputStream RCE, Java deserialization gadget chain, XStream deserialization, Jackson enableDefaultTyping

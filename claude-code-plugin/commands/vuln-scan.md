@@ -45,7 +45,7 @@ Execute all 9 steps sequentially using the orchestrator agent:
 3. **The orchestrator MUST NOT perform specialized work directly** — it delegates to: `analyzer` (Steps 1, 4), `builder` (Step 2), `exploiter` (Steps 5, 7, 8), `reporter` (Step 9)
 4. The orchestrator MUST verify Docker readiness (Step 3) before delegating to the exploiter
 5. Use skills from `skills/` for type-specific logic
-   - If template rendering, SSTI, or template sandbox escape is in scope during Step 4, also use `skills/template-engine-rce/SKILL.md`
+   - If template rendering, SSTI, or template sandbox escape is in scope during Step 4, keep the workflow inside the existing `rce` skills and let them load `resources/template-engine-rce.md` on demand
 6. Use templates from `templates/` for prompt guidance at each step
 7. Track state in `workspace/pipeline_state.json` with **exactly 9 step entries**
 
