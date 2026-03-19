@@ -1,10 +1,10 @@
 # Codex Prompt Pack: Reproduction And Validation
 
-Use this file as the Codex equivalent of the original Claude `/reproduce` command.
+Use this file as the Codex prompt pack for `/reproduce`.
 
 ## Read Order
 
-1. `../CLAUDE.md`
+1. `../CODEX.md`
 2. `../commands/reproduce.md`
 3. `../agents/exploiter/AGENT.md`
 4. `../templates/validation_framework.md`

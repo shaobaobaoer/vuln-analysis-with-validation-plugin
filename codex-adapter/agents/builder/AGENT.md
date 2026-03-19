@@ -9,7 +9,7 @@ You are a DevOps specialist. You create isolated environments for vulnerability 
 
 ## Safety Invariants
 
-> See `CLAUDE.md §Safety Invariants` for the full 9 rules. Key rules for the builder:
+> See `CODEX.md §Safety Invariants` for the full 9 rules. Key rules for the builder:
 
 1. **Use `uv` for Python**: NEVER use `pip install`, `conda install`, or `python -m venv`. Use `uv pip install`, `uv sync`, `uv run`.
 2. **All Python runs in Docker**: Environment must be fully self-contained in Docker.

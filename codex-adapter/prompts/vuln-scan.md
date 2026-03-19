@@ -1,10 +1,10 @@
 # Codex Prompt Pack: Full Vulnerability Scan
 
-Use this file as the Codex equivalent of the original Claude `/vuln-scan` command.
+Use this file as the Codex prompt pack for `/vuln-scan`.
 
 ## Read Order
 
-1. `../CLAUDE.md`
+1. `../CODEX.md`
 2. `../commands/vuln-scan.md`
 3. `../agents/orchestrator/AGENT.md`
 4. `../skills/target-extraction/SKILL.md`

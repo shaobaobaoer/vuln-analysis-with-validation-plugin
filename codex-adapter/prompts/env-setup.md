@@ -1,10 +1,10 @@
 # Codex Prompt Pack: Environment Setup
 
-Use this file as the Codex equivalent of the original Claude `/env-setup` command.
+Use this file as the Codex prompt pack for `/env-setup`.
 
 ## Read Order
 
-1. `../CLAUDE.md`
+1. `../CODEX.md`
 2. `../commands/env-setup.md`
 3. `../agents/analyzer/AGENT.md`
 4. `../agents/builder/AGENT.md`

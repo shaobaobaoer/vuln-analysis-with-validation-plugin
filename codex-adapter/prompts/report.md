@@ -1,10 +1,10 @@
 # Codex Prompt Pack: Report Generation
 
-Use this file as the Codex equivalent of the original Claude `/report` command.
+Use this file as the Codex prompt pack for `/report`.
 
 ## Read Order
 
-1. `../CLAUDE.md`
+1. `../CODEX.md`
 2. `../commands/report.md`
 3. `../agents/reporter/AGENT.md`
 4. `../templates/report_delivery.md`

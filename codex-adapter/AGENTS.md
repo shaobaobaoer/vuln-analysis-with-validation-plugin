@@ -5,13 +5,13 @@ This directory is a self-contained Codex-facing variant of the vulnerability ana
 ## Project Summary
 
 - This repo is primarily an instruction-driven security workflow, not just a Python package.
-- The main behavior lives in `./CLAUDE.md`, `./commands/*.md`, `./agents/*/AGENT.md`, and `./skills/*/SKILL.md`.
+- The main behavior lives in `./CODEX.md`, `./commands/*.md`, `./agents/*/AGENT.md`, and `./skills/*/SKILL.md`.
 - `./core/` is a helper runtime library for reports, Docker orchestration, and validation; it does not replace the documented multi-agent workflow.
 - Default Codex-specific writes should stay inside this directory or the runtime `workspace/` output tree.
 
 ## Non-Invasive Policy
 
-- Treat `./CLAUDE.md`, `./commands/`, `./agents/`, and the copied base skills under `./skills/` as the local authoritative workflow for the Codex subproject.
+- Treat `./CODEX.md`, `./commands/`, `./agents/`, and `./skills/` as the local authoritative workflow for the Codex subproject.
 - Put Codex-only instructions, wrappers, and prompt packs in this directory.
 - Keep Codex-specific overlays and role adapters additive instead of editing the copied workflow more than necessary.
 

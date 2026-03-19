@@ -3,32 +3,23 @@
 `codex-adapter/` is the Codex-oriented subproject for the vulnerability-analysis workflow.
 
 It is intentionally self-contained:
-- it has its own local `CLAUDE.md`, `agents/`, `commands/`, `skills/`, `templates/`, and `core/`
+- it has its own local `CODEX.md`, `agents/`, `commands/`, `skills/`, `templates/`, and `core/`
 - it adds Codex-specific `AGENTS.md`, `prompts/`, and `roles/`
-- it does not require runtime path references into the sibling `claude-code-plugin/` project
+- it does not require runtime path references outside `codex-adapter/`
 
 ## What Lives Here
 
 The workflow is still instruction-first. The main behavior is driven by local documents rather than a single executable entrypoint:
 
-- `./CLAUDE.md`: root workflow rules and safety invariants
-- `./commands/*.md`: copied workflow entrypoints aligned with the Claude command set
-- `./agents/*/AGENT.md`: copied agent prompts for orchestrator, analyzer, builder, exploiter, and reporter
-- `./skills/*/SKILL.md`: copied operational skills plus Codex-side refinements inside the existing workflow
+- `./CODEX.md`: root workflow rules and safety invariants
+- `./commands/*.md`: local workflow entrypoints for the canonical pipeline labels
+- `./agents/*/AGENT.md`: local agent prompts for orchestrator, analyzer, builder, exploiter, and reporter
+- `./skills/*/SKILL.md`: operational skills plus Codex-side refinements inside the existing workflow
 - `./templates/*.md`: local prompt templates used by the workflow
 - `./core/`: helper runtime code for orchestration, validation, and reporting
 - `./AGENTS.md`: Codex-specific skill catalog and operating rules
 - `./prompts/*.md`: Codex-native workflow entrypoints
 - `./roles/*.md`: Codex-native role briefs for delegated work
-
-## Relationship To The Claude Subproject
-
-This repository contains two sibling subprojects:
-
-- `../claude-code-plugin/`: the Claude Code plugin variant
-- `./`: the Codex variant
-
-They are meant to preserve the same workflow content while differing in agent-facing wiring. The Codex subproject should prefer its own local copies when reading skills, commands, and agent docs.
 
 ## Codex-Specific Additions
 
@@ -68,8 +59,8 @@ It also explicitly excludes common false positives:
 
 1. Open Codex in `codex-adapter/`.
 2. Start from one of the prompt packs in `./prompts/`.
-3. Let Codex follow the local workflow documents under `./CLAUDE.md`, `./commands/`, `./agents/`, and `./skills/`.
-4. Keep Codex-specific adjustments in `./prompts/`, `./roles/`, and local skill resources unless you explicitly want to change the Claude subproject too.
+3. Let Codex follow the local workflow documents under `./CODEX.md`, `./commands/`, `./agents/`, and `./skills/`.
+4. Keep Codex-specific adjustments in `./prompts/`, `./roles/`, and local skill resources inside this subproject.
 
 ## Prompt Packs
 
@@ -92,7 +83,7 @@ It also explicitly excludes common false positives:
 ```text
 codex-adapter/
 ├── AGENTS.md
-├── CLAUDE.md
+├── CODEX.md
 ├── prompts/
 ├── roles/
 ├── agents/

@@ -1,10 +1,10 @@
 # Codex Prompt Pack: PoC Generation
 
-Use this file as the Codex equivalent of the original Claude `/poc-gen` command.
+Use this file as the Codex prompt pack for `/poc-gen`.
 
 ## Read Order
 
-1. `../CLAUDE.md`
+1. `../CODEX.md`
 2. `../commands/poc-gen.md`
 3. `../agents/exploiter/AGENT.md`
 4. `../skills/poc-writer/SKILL.md`

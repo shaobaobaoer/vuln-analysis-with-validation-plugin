@@ -82,7 +82,7 @@ Findings MUST map to one of these 12 types. Findings that cannot be mapped are e
 - For each finding, trace a call path from a **public entry point** (public API, HTTP route, CLI argument) to the vulnerable code
 - Classify as `reachable` / `conditional` / `not_reachable`
 - **EXCLUDE** all `not_reachable` findings — they are not exploitable
-- See `CLAUDE.md §Entry Point Reachability` for language-specific rules
+- See `CODEX.md §Entry Point Reachability` for language-specific rules
 
 ### Phase 5 — Intended Functionality Check (MANDATORY)
 - Assess whether the exploitable behavior **exceeds the designed purpose** of the API

@@ -9,7 +9,7 @@ GitHub repository URL or local project path.
 
 ## Key Rules
 1. Detect project type: `library` / `webapp` / `cli` / `service`
-2. Enumerate ALL public entry points — see `CLAUDE.md §Entry Point Reachability` for language-specific rules
+2. Enumerate ALL public entry points — see `CODEX.md §Entry Point Reachability` for language-specific rules
 3. Exclude private/internal/test-only code from entry points
 
 ## Output

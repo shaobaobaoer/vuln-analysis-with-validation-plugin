@@ -17,7 +17,7 @@ exploit code against a Docker-hosted target. The correct workflow is:
     1. Copy PoC scripts into the running container.
     2. Run ``docker exec <container> python3 /workspace/pocs/poc_rce_001.py``
 
-See ``CLAUDE.md §Safety Invariants`` for the full policy.
+See ``CODEX.md §Safety Invariants`` for the full policy.
 """
 
 from __future__ import annotations

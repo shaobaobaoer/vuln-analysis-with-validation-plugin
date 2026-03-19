@@ -16,7 +16,7 @@ Run the complete **9-step** vulnerability analysis pipeline against a GitHub rep
 
 ## Safety Rules
 
-> See `CLAUDE.md §Safety Invariants` for the full 9 rules.
+> See `CODEX.md §Safety Invariants` for the full 9 rules.
 
 - **Docker-only**: All execution inside Docker. If Docker is unavailable, pipeline MUST abort.
 - **Steps 1-4 are mandatory**: Pipeline aborts if any fails.

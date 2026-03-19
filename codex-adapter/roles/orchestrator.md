@@ -4,7 +4,7 @@ Use this brief when spawning a Codex sub-agent to coordinate the full vulnerabil
 
 ## Authoritative Sources
 
-- `../CLAUDE.md`
+- `../CODEX.md`
 - `../agents/orchestrator/AGENT.md`
 - `../commands/vuln-scan.md`
 
@@ -27,5 +27,5 @@ Use this brief when spawning a Codex sub-agent to coordinate the full vulnerabil
 
 - Mirror the original architecture with `spawn_agent`.
 - Pass the relevant role brief plus the local copied `AGENT.md` file path to each sub-agent.
-- Prefer local Codex subproject files for workflow changes; edit the separate Claude subproject only when the user explicitly asks to change it too.
+- Prefer local Codex subproject files for workflow changes and keep modifications inside `codex-adapter/` unless the user explicitly asks otherwise.
 - If template-engine `rce` or sandbox escape is in scope, make sure analyzer, exploiter, and reporter load the embedded `resources/template-engine-rce.md` guidance from their parent `rce` workflow skills.

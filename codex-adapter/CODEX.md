@@ -1,6 +1,6 @@
-# Vuln-Analysis — Automated Security Vulnerability Verification
+# Codex Workflow — Automated Security Vulnerability Verification
 
-This is a Claude plugin for automated security vulnerability verification of open-source libraries, web applications, and CLI tools. It is designed for authorized penetration testing, CTF competitions, and defensive security research.
+This is the Codex-adapted root workflow for automated security vulnerability verification of open-source libraries, web applications, and CLI tools. It is designed for authorized penetration testing, CTF competitions, and defensive security research.
 
 ## Project Overview
 
@@ -141,7 +141,9 @@ For these targets, the pipeline can only find `dos` (algorithmic) or `command_in
 
 **Abort conditions**: Steps 1-4 failing = pipeline abort. No fallback, no skip.
 
-## Available Commands
+## Workflow Labels
+
+These canonical workflow names are preserved for compatibility with the local workflow docs and Codex prompt packs:
 
 - `/vuln-scan` — Full 9-step pipeline against a GitHub repository
 - `/env-setup` — Docker environment setup only
@@ -210,12 +212,12 @@ Vulnerability analysis uses a mandatory 3-phase code audit: **Audit → Filter �
 ## File Structure
 
 ```
-vuln-analysis/
-├── CLAUDE.md                    # This file
+codex-adapter/
+├── CODEX.md                     # This file
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
-├── commands/                    # Slash commands (5 commands)
+├── commands/                    # Workflow documents (5 entries)
 │   ├── vuln-scan.md             #   /vuln-scan — full 9-step pipeline
 │   ├── env-setup.md             #   /env-setup — environment setup only
 │   ├── poc-gen.md               #   /poc-gen — PoC generation only
