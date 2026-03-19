@@ -1,0 +1,28 @@
+# Codex Prompt Pack: Reproduction And Validation
+
+Use this file as the Codex equivalent of the original Claude `/reproduce` command.
+
+## Read Order
+
+1. `../CLAUDE.md`
+2. `../commands/reproduce.md`
+3. `../agents/exploiter/AGENT.md`
+4. `../templates/validation_framework.md`
+5. `../skills/poc-writer/SKILL.md`
+6. `../skills/template-engine-rce/SKILL.md` when an `rce` finding depends on a template payload or sandbox escape
+7. The validator skill that matches each finding type
+8. `../roles/exploiter.md`
+
+## Codex Execution Contract
+
+- Perform the documented pre-flight checks before any PoC execution.
+- Execute PoCs only against the Dockerized target.
+- Re-initialize monitoring before retries.
+- Use the matching `validate-*` skill for each finding type.
+- Save canonical results to `workspace/results.json`.
+- Never run PoC or validator Python directly on the host.
+
+## Expected Outputs
+
+- `workspace/results.json`
+- Updated PoC scripts if retries required fixes
