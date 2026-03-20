@@ -44,3 +44,6 @@ evidence/
 
 # Analyzer run artifacts (logs, workspace dirs, scripts, CSVs from pipeline runs)
 /analyzer/
+
+# Local sample data
+/codex-adapter/sample/
