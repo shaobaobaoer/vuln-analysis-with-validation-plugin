@@ -37,7 +37,7 @@ done
 
 # Make scripts executable
 find "${DEST}" -name "*.sh" -exec chmod +x {} \;
-[ -f "${DEST}/skills/_shared/trigger.linux" ] && chmod +x "${DEST}/skills/_shared/trigger.linux"
+[ -f "${DEST}/skills/validation-framework/resources/trigger.linux" ] && chmod +x "${DEST}/skills/validation-framework/resources/trigger.linux"
 
 echo "Done! Plugin installed to ${DEST}"
 echo "Directories populated:"

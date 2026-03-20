@@ -47,3 +47,6 @@ evidence/
 
 # Local sample data
 sample/
+
+# Memory (agent working memory — generated at runtime)
+memory/

@@ -20,7 +20,7 @@ Execute PoC scripts against the Docker-containerized target and verify reproduct
 | 7 — Reproduction | `exploiter` | `validate-{type}` per finding | **only** validators matching finding types |
 | 8 — Retry Loop | `exploiter` | same as Step 7 + `poc-writer` for rewrites | only for failed findings |
 
-**Validator routing**: See `skills/type-mapping.md §Validator Routing` — each finding type maps to exactly one validator skill.
+**Validator routing**: See `skills/type-mapping/SKILL.md §Validator Routing` — each finding type maps to exactly one validator skill.
 
 ## Safety Rules
 
@@ -30,7 +30,7 @@ Execute PoC scripts against the Docker-containerized target and verify reproduct
 ## Instructions
 
 1. **Pre-flight check**: Verify container running, app responding
-2. **Initialize monitoring**: Deploy trigger binary, TCP listeners, file monitors per `skills/_shared/validation_framework.md`
+2. **Initialize monitoring**: Deploy trigger binary, TCP listeners, file monitors per `skills/validation-framework/SKILL.md`
 3. Delegate to `agents/exploiter/AGENT.md`
 4. Execute each PoC from `workspace/poc_manifest.json`
 5. **Legitimacy check**: Anti-cheat scan of PoC source

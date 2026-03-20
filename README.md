@@ -64,7 +64,6 @@ vuln-analysis-with-validation-plugin/
 │   ├── validators/                        #   Base + concrete validators
 │   ├── reporters/                         #   Markdown + JSON report generators
 │   └── runners/                           #   Docker manager
-├── tools/                                 # Workspace validation tools
 ├── examples/                              # Example PoCs and Dockerfiles
 ├── README.md                              # This file
 ├── requirements.txt

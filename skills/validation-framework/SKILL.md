@@ -1,3 +1,9 @@
+---
+name: validation-framework
+description: Unified PoC validation framework defining observable, automatable, cheat-proof success criteria for all vulnerability types. Provides shared infrastructure (trigger binary, TCP listeners, file monitors) and the canonical 6-step validation flow.
+origin: vuln-analysis
+---
+
 # Unified PoC Validation Framework
 
 This framework defines **observable, automatable, cheat-proof** success criteria for PoC validation. The core principle: a PoC must exploit through the actual vulnerability entry point — never by directly calling system APIs, reading files, or connecting to listeners from the PoC script itself.
@@ -29,9 +35,9 @@ func main() {
 }
 ```
 
-The compiled binary is at `skills/_shared/trigger.linux`. Deploy to Docker as `/tmp/invoke`:
+The compiled binary is at `skills/validation-framework/resources/trigger.linux`. Deploy to Docker as `/tmp/invoke`:
 ```bash
-docker cp skills/_shared/trigger.linux <container>:/tmp/invoke
+docker cp skills/validation-framework/resources/trigger.linux <container>:/tmp/invoke
 docker exec <container> chmod +x /tmp/invoke
 ```
 
@@ -106,7 +112,7 @@ Before any PoC execution, set up all monitoring infrastructure inside the Docker
 docker exec <container> sh -c 'echo "FLAG_CONTENT_$(date +%s)" > /tmp/flag'
 
 # 1b. Deploy trigger binary
-docker cp skills/_shared/trigger.linux <container>:/tmp/invoke
+docker cp skills/validation-framework/resources/trigger.linux <container>:/tmp/invoke
 docker exec <container> chmod +x /tmp/invoke
 
 # 1c. Clean up marker files

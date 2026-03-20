@@ -22,7 +22,7 @@ Confirm whether a vulnerability allows arbitrary code execution on the server by
 
 ```bash
 # Deploy trigger binary
-docker cp skills/_shared/trigger.linux <container>:/tmp/invoke
+docker cp skills/validation-framework/resources/trigger.linux <container>:/tmp/invoke
 docker exec <container> chmod +x /tmp/invoke
 
 # Start TCP listener on port 59875

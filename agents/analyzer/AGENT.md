@@ -294,7 +294,7 @@ Every finding in `workspace/vulnerabilities.json` MUST have its `type` field set
 - `cli`: rce, arbitrary_file_rw, dos, command_injection
 - `library`: dos, command_injection, insecure_deserialization (network-receiving only), prototype_pollution (JS/TS libs with deep-merge exports)
 
-> **Full type mapping**: See `skills/type-mapping.md` for comprehensive descriptive-name → type-key mapping, EXCLUDE list, and all observed variations.
+> **Full type mapping**: See `skills/type-mapping/SKILL.md` for comprehensive descriptive-name → type-key mapping, EXCLUDE list, and all observed variations.
 
 **CRITICAL**: The `type` field MUST be the exact lowercase key (e.g., `rce`), NEVER a descriptive English name. If a finding cannot be mapped to one of the 12 types, EXCLUDE it and place in `excluded_findings[]`.
 

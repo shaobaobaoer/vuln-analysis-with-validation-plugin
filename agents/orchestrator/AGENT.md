@@ -155,8 +155,8 @@ Each pipeline stage activates a SPECIFIC, LIMITED set of skills. No skill should
 
 ### Step 6: Environment Initialization
 - **Performed by**: orchestrator (self) OR delegated to `exploiter` agent
-- Set up validation infrastructure per `skills/_shared/validation_framework.md`:
-  - Deploy trigger binary (`skills/_shared/trigger.linux` → `/tmp/invoke`)
+- Set up validation infrastructure per `skills/validation-framework/SKILL.md`:
+  - Deploy trigger binary (`skills/validation-framework/resources/trigger.linux` → `/tmp/invoke`)
   - Start TCP listeners (port 59875 for RCE/command injection, port 59876 for SSRF)
   - Set up file monitors (`inotifywait` for arbitrary file R/W)
   - Create flag file (`/tmp/flag`)
@@ -367,7 +367,7 @@ Maintain `workspace/pipeline_state.json` with 9 step statuses:
 | 3 - Docker Readiness Gate | `orchestrator` (self) | Running container | Gate pass/fail | Verify container is up, app responds, health check passes. **MANDATORY** |
 | 4 - Vulnerability Analysis | `analyzer` | Source code + `workspace/target.json` | `workspace/vulnerabilities.json` | Static analysis to identify candidate vulnerabilities. **MANDATORY** |
 | 5 - PoC Generation | `exploiter` | `workspace/vulnerabilities.json` | `workspace/poc_scripts/` + `workspace/poc_manifest.json` | Generate PoC scripts targeting Docker container ONLY |
-| 6 - Environment Init | `orchestrator` (self) | Container + `skills/_shared/trigger.linux` | Monitoring infrastructure deployed | Deploy trigger binary, start TCP listeners, set up inotifywait |
+| 6 - Environment Init | `orchestrator` (self) | Container + `skills/validation-framework/resources/trigger.linux` | Monitoring infrastructure deployed | Deploy trigger binary, start TCP listeners, set up inotifywait |
 | 7 - Reproduction + Validation | `exploiter` | `workspace/poc_manifest.json` + container | `workspace/results.json` | Execute PoCs → legitimacy check → type-specific validation |
 | 8 - Retry Loop | `exploiter` | `workspace/results.json` + container | Updated `workspace/results.json` | Retry failed PoCs with fixes, max 5 per vuln, re-init monitors each retry |
 | 9 - Report | `reporter` | All `workspace/` artifacts | `workspace/report/REPORT.md` + `workspace/report/summary.json` | Compile findings into a structured report with evidence |

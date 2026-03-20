@@ -30,7 +30,7 @@ Run the complete **9-step** vulnerability analysis pipeline against a GitHub rep
 | 8 — Retry Loop | `exploiter` | same as Step 7 + `poc-writer` for rewrites | only for failed findings |
 | 9 — Report | `reporter` | — | always |
 
-**Type routing**: Step 4 output is gated by `skills/type-mapping.md` (language x target_type → valid_vuln_types). Step 7 loads only the validators for types that passed Step 4.
+**Type routing**: Step 4 output is gated by `skills/type-mapping/SKILL.md` (language x target_type → valid_vuln_types). Step 7 loads only the validators for types that passed Step 4.
 
 ## Safety Rules
 
