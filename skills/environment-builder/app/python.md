@@ -1,51 +1,51 @@
-# Python 项目搭建
+# Python Project Setup
 
-没有 Docker Compose / Dockerfile 时，识别为 Python 项目后使用。
+Used when no Docker Compose / Dockerfile is present and the project is identified as a Python project.
 
-> **MANDATORY**: 所有 Python 依赖管理必须使用 `uv`。禁止直接使用 `pip install`、`conda install`、`python -m venv`。所有 Python 执行必须在 Docker 容器内进行。
+> **MANDATORY**: All Python dependency management must use `uv`. Direct use of `pip install`, `conda install`, or `python -m venv` is prohibited. All Python execution must be done inside Docker containers.
 
 ---
 
-## 第一步：在 Docker 中安装 uv
+## Step 1: Install uv in Docker
 
-所有 Python 项目的 Dockerfile 必须安装 `uv`：
+All Python project Dockerfiles must install `uv`:
 
 ```dockerfile
-# 在 Dockerfile 中安装 uv
+# Install uv in Dockerfile
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 ```
 
 ---
 
-## 第二步：创建环境 + 安装依赖（Docker 内）
+## Step 2: Create Environment + Install Dependencies (Inside Docker)
 
-所有操作在 Docker 容器内执行，使用 `uv` 管理依赖：
+All operations are executed inside Docker containers, using `uv` to manage dependencies:
 
 ```bash
-# 方式一：项目有 pyproject.toml（推荐）
+# Option 1: Project has pyproject.toml (recommended)
 docker exec <container> uv sync
 
-# 方式二：项目有 requirements.txt
+# Option 2: Project has requirements.txt
 docker exec <container> uv pip install --system -r requirements.txt
 
-# 方式三：项目有 environment.yml（仅 ML 项目 fallback）
-# 先安装 conda 包，再用 uv 安装 pip 依赖
+# Option 3: Project has environment.yml (ML project fallback only)
+# Install conda packages first, then use uv to install pip dependencies
 docker exec <container> uv pip install --system -r requirements.txt
 
-# 指定 Python 版本
+# Specify Python version
 docker exec <container> uv python install 3.11
 docker exec <container> uv venv --python 3.11
 ```
 
-**NEVER** 在宿主机上运行 `python3` 或 `pip install`。
+**NEVER** run `python3` or `pip install` on the host machine.
 
 ---
 
-## 第三步：ML 依赖（仅 ML/AI 项目）
+## Step 3: ML Dependencies (ML/AI Projects Only)
 
 ```bash
-# PyTorch CPU（在 Docker 容器内）
+# PyTorch CPU (inside Docker container)
 docker exec <container> uv pip install --system torch torchvision torchaudio \
     --index-url https://download.pytorch.org/whl/cpu
 
@@ -56,34 +56,34 @@ docker exec <container> uv pip install --system tensorflow-cpu
 docker exec <container> uv pip install --system torch torchvision torchaudio
 ```
 
-### 脚本返回的状态码及 agent 应对
+### Script Return Status Codes and Agent Response
 
-| 状态码 | 含义 | agent 行动 |
+| Status Code | Meaning | Agent Action |
 |-------|------|-----------|
-| `ML_GPU_OK` | GPU 版安装成功 | 继续 |
-| `ML_NO_GPU` | 没检测到 GPU | **问用户**：确实没 GPU？用户确认后安装 CPU 版 |
-| `ML_GPU_INSTALL_FAILED` | GPU 版安装失败 | **问用户**：是否降级 CPU 版？ |
-| `ML_GPU_VERIFY_FAILED` | 装了但 CUDA 不可用 | **问用户**：是否继续？ |
-| `ML_NO_ML_DEPS` | 项目不需要 ML | 跳过 |
+| `ML_GPU_OK` | GPU version installed successfully | Continue |
+| `ML_NO_GPU` | No GPU detected | **Ask user**: Really no GPU? Install CPU version after user confirms |
+| `ML_GPU_INSTALL_FAILED` | GPU version installation failed | **Ask user**: Downgrade to CPU version? |
+| `ML_GPU_VERIFY_FAILED` | Installed but CUDA unavailable | **Ask user**: Continue anyway? |
+| `ML_NO_ML_DEPS` | Project does not need ML | Skip |
 
 ---
 
-## 第四步：数据库迁移（按需，Docker 内执行）
+## Step 4: Database Migration (As Needed, Inside Docker)
 
 ```bash
-# 在 Docker 容器内执行
+# Execute inside Docker container
 docker exec <container> python manage.py migrate            # Django
 docker exec <container> flask db upgrade                     # Flask + Alembic
-docker exec <container> python manage.py init_db             # 通用
+docker exec <container> python manage.py init_db             # Generic
 ```
 
 ---
 
-## 第五步：启动应用（Docker 内）
+## Step 5: Start Application (Inside Docker)
 
 ```bash
-# 应用在 Docker 容器内启动，通过端口映射暴露到宿主机
-# Dockerfile CMD 或 docker-compose command 启动
+# Application starts inside Docker container, exposed to host via port mapping
+# Started via Dockerfile CMD or docker-compose command
 
 # Django
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
@@ -98,24 +98,24 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 CMD ["python", "app.py"]
 ```
 
-ML 脚本项目无需启动服务，验证环境可用即可报告 READY。
+ML script projects do not need to start a service; report READY once the environment is verified.
 
 ---
 
-## Dockerfile 模板（Python + uv）
+## Dockerfile Template (Python + uv)
 
 ```dockerfile
 FROM python:3.12-slim
 WORKDIR /app
 
-# 安装系统依赖 + uv
+# Install system dependencies + uv
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl gcc g++ python3-dev libffi-dev libssl-dev && \
     rm -rf /var/lib/apt/lists/* && \
     curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
-# 安装 Python 依赖（使用 uv，NEVER pip）
+# Install Python dependencies (using uv, NEVER pip)
 COPY requirements.txt .
 RUN uv pip install --system -r requirements.txt
 
@@ -128,28 +128,28 @@ CMD ["python", "app.py"]
 
 ---
 
-## 清理
+## Cleanup
 
 ```bash
-# 停止并删除 Docker 容器
+# Stop and remove Docker containers
 docker-compose down -v
 
-# 删除构建产物
+# Remove build artifacts
 docker rmi <image_name> 2>/dev/null
 ```
 
 ---
 
-## uv 安装失败处理
+## uv Installation Failure Handling
 
 ```bash
-# 缺编译依赖
+# Missing build dependencies
 docker exec <container> apt-get update && apt-get install -y gcc g++ python3-dev libffi-dev libssl-dev
 
-# uv 网络超时 — 使用镜像源
+# uv network timeout — use mirror
 docker exec <container> uv pip install --system -r requirements.txt \
     --index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
-# uv 本身安装失败 — 使用 pip bootstrap
+# uv itself failed to install — use pip bootstrap
 docker exec <container> pip install uv
 ```

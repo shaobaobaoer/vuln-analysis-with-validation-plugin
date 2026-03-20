@@ -1,188 +1,188 @@
-# 输出规范
+# Output Specification
 
-搭建完成后必须做两件事：**终端输出摘要** + **写入文件到项目目录**。
+After setup is complete, two things must be done: **terminal output summary** + **write file to project directory**.
 
-**写入文件是强制要求，不可跳过。** 用户关闭终端后，这个文件是唯一的参考。
-
----
-
-## 1. 终端摘要
-
-在终端输出以下内容，让用户立即看到结果：
-
-```
-环境状态: READY / PARTIAL / FAILED
-
-运行服务
-- Web 应用: http://localhost:<port> (<framework>)
-- 数据库: localhost:<port> (<db_type>)
-
-激活命令: conda activate <env_name> / source <path>/bin/activate
-启动命令: <实际启动命令>
-停止命令: <实际停止命令>
-
-详细文档已保存到: ${PROJECT_DIR}/ENVIRONMENT_SETUP.md
-```
+**Writing the file is mandatory and cannot be skipped.** After the user closes the terminal, this file is the only reference.
 
 ---
 
-## 2. 写入 ENVIRONMENT_SETUP.md（强制）
+## 1. Terminal Summary
 
-**必须**用 Write 工具将以下内容写入 `${PROJECT_DIR}/ENVIRONMENT_SETUP.md`。
+Output the following in the terminal so the user can see results immediately:
 
-这是用户日后的操作手册，写清楚、写完整。根据实际搭建情况填充，没有的章节跳过。
+```
+Environment Status: READY / PARTIAL / FAILED
+
+Running Services
+- Web App: http://localhost:<port> (<framework>)
+- Database: localhost:<port> (<db_type>)
+
+Activate Command: conda activate <env_name> / source <path>/bin/activate
+Start Command: <actual start command>
+Stop Command: <actual stop command>
+
+Detailed documentation saved to: ${PROJECT_DIR}/ENVIRONMENT_SETUP.md
+```
+
+---
+
+## 2. Write ENVIRONMENT_SETUP.md (Mandatory)
+
+**Must** use the Write tool to write the following content to `${PROJECT_DIR}/ENVIRONMENT_SETUP.md`.
+
+This is the user's future operation manual; write it clearly and completely. Fill in based on the actual setup; skip sections that don't apply.
 
 ```markdown
-# <项目名> 环境搭建文档
+# <Project Name> Environment Setup Documentation
 
-> 搭建时间：<日期>
-> 搭建方式：env-setup agent
+> Setup Time: <date>
+> Setup Method: env-setup agent
 
 ---
 
-## 环境信息
+## Environment Information
 
-| 项目 | 值 |
+| Item | Value |
 |------|-----|
-| 项目位置 | <PROJECT_DIR 的绝对路径> |
-| 语言 | <语言及版本> |
-| 框架 | <框架及版本> |
-| 环境类型 | conda / venv / Docker / 系统 |
-| 环境名称 | <env_name>（如适用） |
-| Python 版本 | <version>（如适用） |
-| Node 版本 | <version>（如适用） |
-| GPU | <型号及显存，或"无"> |
+| Project Location | <absolute path of PROJECT_DIR> |
+| Language | <language and version> |
+| Framework | <framework and version> |
+| Environment Type | conda / venv / Docker / system |
+| Environment Name | <env_name> (if applicable) |
+| Python Version | <version> (if applicable) |
+| Node Version | <version> (if applicable) |
+| GPU | <model and VRAM, or "none"> |
 
 ---
 
-## 日常使用
+## Daily Usage
 
-### 激活环境
+### Activate Environment
 
-<根据实际情况写，例如：>
+<Write based on actual setup, for example:>
 
 ```bash
 conda activate setup_<project_name>
-# 或
+# Or
 source <PROJECT_DIR>/venv/bin/activate
 ```
 
-### 启动项目
+### Start Project
 
 ```bash
-<实际的启动命令，如 python manage.py runserver 0.0.0.0:8000>
+<actual start command, e.g. python manage.py runserver 0.0.0.0:8000>
 ```
 
-### 停止项目
+### Stop Project
 
 ```bash
-<实际的停止命令，如 Ctrl+C 或 docker compose down>
+<actual stop command, e.g. Ctrl+C or docker compose down>
 ```
 
-### 重启项目
+### Restart Project
 
 ```bash
-<实际的重启命令>
+<actual restart command>
 ```
 
-### 访问地址
+### Access URLs
 
 - Web: http://localhost:<port>
-- API: http://localhost:<port>/api（如适用）
-- 数据库: localhost:<db_port>（如适用）
+- API: http://localhost:<port>/api (if applicable)
+- Database: localhost:<db_port> (if applicable)
 
 ---
 
-## 数据库信息（如适用）
+## Database Information (If Applicable)
 
-| 项目 | 值 |
+| Item | Value |
 |------|-----|
-| 类型 | PostgreSQL / MySQL / SQLite / MongoDB / Redis |
-| 主机 | localhost |
-| 端口 | <port> |
-| 数据库名 | <db_name> |
-| 用户名 | <username> |
-| 密码 | <password> |
-| 连接命令 | <如 psql -h localhost -p 5432 -U user -d dbname> |
+| Type | PostgreSQL / MySQL / SQLite / MongoDB / Redis |
+| Host | localhost |
+| Port | <port> |
+| Database Name | <db_name> |
+| Username | <username> |
+| Password | <password> |
+| Connection Command | <e.g. psql -h localhost -p 5432 -U user -d dbname> |
 
 ---
 
-## 环境变量
+## Environment Variables
 
-项目使用的环境变量文件：`<.env 文件路径>`
+Environment variable file used by the project: `<.env file path>`
 
-关键变量说明：
+Key variable descriptions:
 
-| 变量 | 值 | 说明 |
+| Variable | Value | Description |
 |------|-----|------|
-| DATABASE_URL | <值> | 数据库连接串 |
-| SECRET_KEY | <值> | 应用密钥 |
+| DATABASE_URL | <value> | Database connection string |
+| SECRET_KEY | <value> | Application secret key |
 | ... | ... | ... |
 
 ---
 
-## 搭建过程记录
+## Setup Process Log
 
-以下是搭建过程中执行的关键操作，供排查问题或重新搭建时参考。
+The following are key operations performed during setup, for reference when troubleshooting or re-setting up.
 
-### 执行的关键步骤
+### Key Steps Executed
 
-1. <步骤1：如"创建 conda 环境 setup_xxx，Python 3.10">
-2. <步骤2：如"uv pip install -r requirements.txt（在 Docker 容器内）">
-3. <步骤3：如"启动 PostgreSQL 容器，端口 5432">
-4. <步骤4：如"执行数据库迁移 python manage.py migrate">
+1. <Step 1: e.g. "Created conda environment setup_xxx, Python 3.10">
+2. <Step 2: e.g. "uv pip install -r requirements.txt (inside Docker container)">
+3. <Step 3: e.g. "Started PostgreSQL container, port 5432">
+4. <Step 4: e.g. "Executed database migration python manage.py migrate">
 5. ...
 
-### 遇到的问题及解决方法
+### Issues Encountered and Solutions
 
-<如果搭建过程中遇到了问题并解决了，记录在这里。没有问题则写"搭建过程顺利，未遇到问题。">
+<If issues were encountered and resolved during setup, record them here. If no issues, write "Setup completed smoothly, no issues encountered.">
 
-| 问题 | 解决方法 |
+| Issue | Solution |
 |------|---------|
-| <问题描述> | <怎么解决的> |
+| <issue description> | <how it was resolved> |
 
 ---
 
-## 清理方法
+## Cleanup Method
 
-如需完全卸载此环境：
+To completely uninstall this environment:
 
 ```bash
-<按实际情况生成，例如：>
+<generate based on actual setup, for example:>
 
-# 停止并删除容器
+# Stop and remove containers
 docker rm -f setup_<project_name>_postgres 2>/dev/null
 
-# 删除 Docker 网络
+# Remove Docker network
 docker network rm setup_net_<project_name> 2>/dev/null
 
-# 删除 conda 环境
+# Remove conda environment
 conda env remove -n setup_<project_name> -y
 
-# 删除工作区（不删源码）
+# Remove workspace (not source code)
 rm -rf <PROJECT_DIR>/.workspace
 ```
 ```
 
 ---
 
-## 全量清理命令（跨项目）
+## Full Cleanup Commands (Cross-Project)
 
-以下命令清理所有 env-setup 创建的资源：
+The following commands clean up all resources created by env-setup:
 
 ```bash
-# 停止所有 setup 容器
+# Stop all setup containers
 docker rm -f $(docker ps -a --filter "name=setup_" -q) 2>/dev/null
 
-# 删除所有 setup 网络
+# Remove all setup networks
 docker network ls --filter "name=setup_net_" -q | xargs -r docker network rm 2>/dev/null
 
-# 删除 conda 环境（只删 setup_ 前缀的，不碰用户已有环境）
+# Remove conda environments (only those with setup_ prefix, does not touch user's existing environments)
 conda env list 2>/dev/null | grep "^setup_" | awk '{print $1}' | xargs -I{} conda env remove -n {} -y 2>/dev/null
 
-# 删除搭建目录（本地项目模式下不要删源码目录，只删 .workspace）
-# clone 模式: rm -rf ${SETUP_ROOT}/
-# 本地模式:   rm -rf ${PROJECT_DIR}/.workspace
+# Remove setup directories (in local project mode, do not delete source directory, only delete .workspace)
+# Clone mode: rm -rf ${SETUP_ROOT}/
+# Local mode:   rm -rf ${PROJECT_DIR}/.workspace
 
-echo "所有环境已清理"
+echo "All environments cleaned up"
 ```

@@ -1,10 +1,10 @@
-# PostgreSQL 搭建
+# PostgreSQL Setup
 
-前置依赖：`helpers/port-isolation.md` + `helpers/image-check.md`。
+Prerequisite: `helpers/port-isolation.md` + `helpers/image-check.md`.
 
 ---
 
-## 启动
+## Start
 
 ```bash
 ensure_image "postgres:15"
@@ -24,16 +24,16 @@ wait_for_service "postgres" "$DB_PORT" "setup_${PROJECT_NAME}_postgres" 30
 echo "PostgreSQL → localhost:${DB_PORT}"
 ```
 
-## 连接信息
+## Connection Info
 
 ```
-HOST=localhost / setup_${PROJECT_NAME}_postgres（容器间）
-PORT=${DB_PORT} / 5432（容器间）
+HOST=localhost / setup_${PROJECT_NAME}_postgres (inter-container)
+PORT=${DB_PORT} / 5432 (inter-container)
 USER=setup  PASSWORD=setup123  DATABASE=${PROJECT_NAME}
 CONNECTION_STRING=postgresql://setup:setup123@localhost:${DB_PORT}/${PROJECT_NAME}
 ```
 
-## 清理
+## Cleanup
 
 ```bash
 docker rm -f "setup_${PROJECT_NAME}_postgres" 2>/dev/null

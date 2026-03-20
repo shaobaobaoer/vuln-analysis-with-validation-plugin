@@ -1,26 +1,26 @@
 #!/bin/bash
-# setup_python_env.sh - 创建并配置 Python 环境
+# setup_python_env.sh - Create and Configure Python Environment
 #
-# 用法:
+# Usage:
 #   bash scripts/setup_python_env.sh --type conda --name myenv --project /path/to/project [--yml environment.yml] [--python 3.10]
 #   bash scripts/setup_python_env.sh --type venv  --path /path/to/venv --project /path/to/project
 #
-# 功能:
-#   1. 创建 conda/venv 环境
-#   2. 安装依赖（requirements.txt / pyproject.toml / setup.py / Pipfile）
-#   3. 每步安装前自动验证环境
+# Features:
+#   1. Create conda/venv environment
+#   2. Install dependencies (requirements.txt / pyproject.toml / setup.py / Pipfile)
+#   3. Automatically verify environment before each installation step
 #
-# 不做的事:
-#   - 不装 ML/GPU 相关包（由 install_ml_deps.sh 处理）
-#   - 不做数据库迁移（由 agent 根据框架判断）
-#   - 不启动应用
+# Does NOT:
+#   - Install ML/GPU packages (handled by install_ml_deps.sh)
+#   - Run database migrations (determined by agent based on framework)
+#   - Start the application
 #
-# 返回值: 0=成功, 1=失败
-# 最后输出: ENV_READY=<conda:name|venv:path>
+# Return value: 0=success, 1=failure
+# Final output: ENV_READY=<conda:name|venv:path>
 
 set -e
 
-# ── 参数解析 ──
+# ── Argument parsing ──
 
 ENV_TYPE=""
 ENV_NAME=""
@@ -37,27 +37,27 @@ while [[ $# -gt 0 ]]; do
         --project) PROJECT_DIR="$2"; shift 2 ;;
         --yml)     YML_FILE="$2";    shift 2 ;;
         --python)  PYTHON_VER="$2";  shift 2 ;;
-        *) echo "未知参数: $1"; exit 1 ;;
+        *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
 
 if [ -z "$PROJECT_DIR" ]; then
-    echo "❌ 必须指定 --project"
+    echo "--project is required"
     exit 1
 fi
 
-# ── 加载环境守卫 ──
+# ── Load environment guard ──
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/env_guard.sh"
 
-# ── 辅助函数 ──
+# ── Helper functions ──
 
 guard() {
     if [ "$ENV_TYPE" = "conda" ]; then
-        ensure_in_env conda "$ENV_NAME" || { echo "❌ 环境丢失，中止"; exit 1; }
+        ensure_in_env conda "$ENV_NAME" || { echo "Environment lost, aborting"; exit 1; }
     elif [ "$ENV_TYPE" = "venv" ]; then
-        ensure_in_env venv "$VENV_PATH" || { echo "❌ 环境丢失，中止"; exit 1; }
+        ensure_in_env venv "$VENV_PATH" || { echo "Environment lost, aborting"; exit 1; }
     fi
 }
 
@@ -66,48 +66,48 @@ install_pip_deps() {
     cd "$PROJECT_DIR"
 
     if [ -f requirements.txt ]; then
-        echo "📦 pip install -r requirements.txt"
+        echo "pip install -r requirements.txt"
         pip install -r requirements.txt
     elif [ -f pyproject.toml ]; then
-        echo "📦 pip install -e . (pyproject.toml)"
+        echo "pip install -e . (pyproject.toml)"
         pip install -e .
     elif [ -f setup.py ]; then
-        echo "📦 pip install -e . (setup.py)"
+        echo "pip install -e . (setup.py)"
         pip install -e .
     elif [ -f Pipfile ]; then
-        echo "📦 pipenv install"
+        echo "pipenv install"
         pip install pipenv && pipenv install --system
     else
-        echo "ℹ️ 未找到 Python 依赖文件"
+        echo "No Python dependency file found"
     fi
 }
 
-# ── 创建环境 ──
+# ── Create environment ──
 
 cd "$PROJECT_DIR"
 
 if [ "$ENV_TYPE" = "conda" ]; then
 
     if [ -z "$ENV_NAME" ]; then
-        echo "❌ conda 模式必须指定 --name"
+        echo "--name is required for conda mode"
         exit 1
     fi
 
-    # 自动检测 python 版本
+    # Auto-detect python version
     if [ -f .python-version ]; then
         PYTHON_VER=$(head -1 .python-version | tr -d '[:space:]')
-        echo "ℹ️ 从 .python-version 读取: Python ${PYTHON_VER}"
+        echo "Read from .python-version: Python ${PYTHON_VER}"
     fi
 
     if [ -n "$YML_FILE" ] && [ -f "$YML_FILE" ]; then
-        # 从 yml 创建
-        echo "📦 conda env create -f ${YML_FILE} -n ${ENV_NAME}"
-        echo "   可能需要 5-15 分钟..."
+        # Create from yml
+        echo "conda env create -f ${YML_FILE} -n ${ENV_NAME}"
+        echo "   This may take 5-15 minutes..."
         conda env remove -n "$ENV_NAME" -y 2>/dev/null || true
         conda env create -f "$YML_FILE" -n "$ENV_NAME"
     else
-        # 空环境
-        echo "📦 conda create -n ${ENV_NAME} python=${PYTHON_VER}"
+        # Empty environment
+        echo "conda create -n ${ENV_NAME} python=${PYTHON_VER}"
         conda env remove -n "$ENV_NAME" -y 2>/dev/null || true
         conda create -n "$ENV_NAME" python="${PYTHON_VER}" -y
     fi
@@ -115,7 +115,7 @@ if [ "$ENV_TYPE" = "conda" ]; then
     conda activate "$ENV_NAME"
     guard
 
-    # yml 可能不包含所有 pip 依赖
+    # yml may not include all pip dependencies
     install_pip_deps
 
 elif [ "$ENV_TYPE" = "venv" ]; then
@@ -124,7 +124,7 @@ elif [ "$ENV_TYPE" = "venv" ]; then
         VENV_PATH="${PROJECT_DIR}/venv"
     fi
 
-    echo "📦 python3 -m venv ${VENV_PATH}"
+    echo "python3 -m venv ${VENV_PATH}"
     python3 -m venv "$VENV_PATH"
     source "${VENV_PATH}/bin/activate"
     guard
@@ -135,17 +135,17 @@ elif [ "$ENV_TYPE" = "venv" ]; then
     install_pip_deps
 
 else
-    echo "❌ --type 必须是 conda 或 venv"
+    echo "--type must be conda or venv"
     exit 1
 fi
 
-# ── 完成 ──
+# ── Done ──
 
 guard
 echo ""
-echo "✅ Python 环境就绪"
+echo "Python environment ready"
 python --version
-echo "   pip packages: $(pip list --format=columns 2>/dev/null | wc -l) 个"
+echo "   pip packages: $(pip list --format=columns 2>/dev/null | wc -l) installed"
 
 if [ "$ENV_TYPE" = "conda" ]; then
     echo "ENV_READY=conda:${ENV_NAME}"

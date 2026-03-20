@@ -1,24 +1,24 @@
-# Java 项目搭建
+# Java Project Setup
 
-当项目没有 Docker Compose / Dockerfile，且识别为 Java 项目时使用。
+Used when the project has no Docker Compose / Dockerfile and is identified as a Java project.
 
-前置依赖：`helpers/port-isolation.md`。
-数据库已由 `db/*.md` 启动完毕。
+Prerequisite: `helpers/port-isolation.md`.
+Databases have already been started by `db/*.md`.
 
-> **MANDATORY (vuln-analysis)**: 漏洞分析模式下，所有执行必须在 Docker 容器内进行。先生成 Dockerfile，再继续后续步骤。
+> **MANDATORY (vuln-analysis)**: In vulnerability analysis mode, all execution must be done inside Docker containers. Generate a Dockerfile first, then proceed with subsequent steps.
 
 ---
 
-## Dockerfile 模板（Java multi-stage build）
+## Dockerfile Template (Java multi-stage build)
 
-### Maven 项目
+### Maven Project
 
 ```dockerfile
 # ── Stage 1: builder ──────────────────────────────────────────────────────────
 FROM maven:3.9-eclipse-temurin-<java_version> AS builder
 WORKDIR /build
 
-# 缓存依赖层
+# Cache dependency layer
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
 
@@ -39,7 +39,7 @@ HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
 CMD ["java", "-jar", "app.jar"]
 ```
 
-### Gradle 项目
+### Gradle Project
 
 ```dockerfile
 # ── Stage 1: builder ──────────────────────────────────────────────────────────
@@ -67,16 +67,16 @@ HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
 CMD ["java", "-jar", "app.jar"]
 ```
 
-### 变量替换
+### Variable Substitution
 
-| 占位符 | 替换为 |
+| Placeholder | Replace With |
 |--------|--------|
-| `<java_version>` | `pom.xml` 中 `<java.version>` 或 `build.gradle` 中 `sourceCompatibility`（如 `17`、`21`）；默认 `17` |
-| `<port>` | 检测到的 `server.port`（默认 `8080`） |
+| `<java_version>` | `<java.version>` in `pom.xml` or `sourceCompatibility` in `build.gradle` (e.g. `17`, `21`); default `17` |
+| `<port>` | Detected `server.port` (default `8080`) |
 
 ---
 
-## 检测构建工具
+## Detect Build Tool
 
 ```bash
 cd "$PROJECT_DIR"
@@ -86,13 +86,13 @@ if [ -f pom.xml ]; then
 elif [ -f build.gradle ] || [ -f build.gradle.kts ]; then
     BUILD_TOOL="gradle"
 else
-    echo "❌ 未识别的 Java 构建工具"
+    echo "Unrecognized Java build tool"
 fi
 ```
 
 ---
 
-## 编译
+## Build
 
 ```bash
 if [ "$BUILD_TOOL" = "maven" ]; then
@@ -111,23 +111,23 @@ elif [ "$BUILD_TOOL" = "gradle" ]; then
     JAR_FILE=$(find build/libs -name "*.jar" -not -name "*-plain.jar" | head -1)
 fi
 
-echo "构建产物: $JAR_FILE"
+echo "Build artifact: $JAR_FILE"
 ```
 
-### 编译失败处理
+### Build Failure Handling
 
 ```bash
-# 检查 Java 版本
+# Check Java version
 java -version
 grep -o "<java.version>.*</java.version>" pom.xml 2>/dev/null
 
-# Maven 换阿里云源
+# Switch Maven to Alibaba Cloud mirror
 mvn clean package -DskipTests -Dmaven.repo.remote=https://maven.aliyun.com/repository/public
 ```
 
 ---
 
-## 配置数据库连接
+## Configure Database Connection
 
 ```bash
 CONFIG_FILE=$(find "$PROJECT_DIR" -path "*/resources/application*.properties" -o -path "*/resources/application*.yml" | head -1)
@@ -140,17 +140,17 @@ fi
 
 ---
 
-## 启动
+## Start
 
 ```bash
 WEB_PORT=$(find_free_port 8080)
 java -jar "$JAR_FILE" --server.port=${WEB_PORT} &
-echo "Java 应用 → localhost:${WEB_PORT}"
+echo "Java app → localhost:${WEB_PORT}"
 ```
 
 ---
 
-## 清理
+## Cleanup
 
 ```bash
 pkill -f "java.*${JAR_FILE}" 2>/dev/null

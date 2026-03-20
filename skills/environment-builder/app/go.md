@@ -1,31 +1,31 @@
-# Go 项目搭建
+# Go Project Setup
 
-当项目没有 Docker Compose / Dockerfile，且识别为 Go 项目时使用。
+Used when the project has no Docker Compose / Dockerfile and is identified as a Go project.
 
-前置依赖：`helpers/port-isolation.md`。
-数据库已由 `db/*.md` 启动完毕。
+Prerequisite: `helpers/port-isolation.md`.
+Databases have already been started by `db/*.md`.
 
-> **MANDATORY**: 所有 Go 项目必须使用 Docker 容器运行。禁止在宿主机直接运行 `go run` 或编译好的二进制文件执行测试。
+> **MANDATORY**: All Go projects must run inside Docker containers. Running `go run` or compiled binaries directly on the host is prohibited.
 
 ---
 
-## 检测构建信息
+## Detect Build Information
 
 ```bash
 cd "$PROJECT_DIR"
 
-# 读取模块名
+# Read module name
 MODULE_NAME=$(grep "^module " go.mod | awk '{print $2}')
 GO_VERSION=$(grep "^go " go.mod | awk '{print $2}')
 
 echo "Module: $MODULE_NAME"
 echo "Go version: $GO_VERSION"
 
-# 查找主入口
+# Find main entry point
 MAIN_FILE=$(find . -name "main.go" | grep -v vendor | head -3)
 echo "Main files: $MAIN_FILE"
 
-# 检测框架
+# Detect framework
 FRAMEWORK="stdlib"
 grep -q "gin-gonic/gin" go.mod   && FRAMEWORK="gin"
 grep -q "labstack/echo"  go.mod  && FRAMEWORK="echo"
@@ -34,7 +34,7 @@ grep -q "go-chi/chi"     go.mod  && FRAMEWORK="chi"
 grep -q "beego"          go.mod  && FRAMEWORK="beego"
 echo "Framework: $FRAMEWORK"
 
-# 检测默认端口
+# Detect default port
 APP_PORT=$(grep -rE 'Listen\(.*:([0-9]+)|:([0-9]{4,5})' \
     $(find . -name "*.go" | grep -v vendor | head -20) 2>/dev/null \
     | grep -oE '[0-9]{4,5}' | head -1)
@@ -43,22 +43,22 @@ APP_PORT=${APP_PORT:-8080}
 
 ---
 
-## Dockerfile 模板（Go multi-stage build）
+## Dockerfile Template (Go multi-stage build)
 
 ```dockerfile
 # ── Stage 1: builder ──────────────────────────────────────────────────────────
 FROM golang:<go_version>-alpine AS builder
 
-# 安装 git（私有模块依赖时需要）
+# Install git (needed for private module dependencies)
 RUN apk add --no-cache git ca-certificates
 
 WORKDIR /build
 
-# 缓存 go.mod / go.sum（依赖层单独缓存）
+# Cache go.mod / go.sum (separate dependency layer cache)
 COPY go.mod go.sum ./
 RUN go mod download
 
-# 复制源码并编译
+# Copy source code and compile
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -trimpath -ldflags="-s -w" -o /app/server .
@@ -79,41 +79,41 @@ HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
 CMD ["./server"]
 ```
 
-### 变量替换
+### Variable Substitution
 
-| 占位符 | 替换为 |
+| Placeholder | Replace With |
 |--------|--------|
-| `<go_version>` | `go.mod` 中的 Go 版本（如 `1.22`）；若 < 1.18 使用 `1.22` |
-| `<port>` | 检测到的端口（默认 `8080`） |
+| `<go_version>` | Go version from `go.mod` (e.g. `1.22`); if < 1.18 use `1.22` |
+| `<port>` | Detected port (default `8080`) |
 
 ---
 
-## 编译失败处理
+## Build Failure Handling
 
 ```bash
-# 1. 依赖下载失败（网络问题）
+# 1. Dependency download failure (network issue)
 RUN GOPROXY=https://goproxy.cn,direct go mod download
 
-# 2. CGO 依赖（sqlite3 / librdkafka 等）— 改用带 gcc 的镜像
-FROM golang:<go_version> AS builder   # 不用 alpine，改用 debian-based
+# 2. CGO dependency (sqlite3 / librdkafka etc.) — switch to image with gcc
+FROM golang:<go_version> AS builder   # Don't use alpine, use debian-based instead
 
-# 3. 私有模块
+# 3. Private modules
 RUN git config --global url."https://token@github.com/".insteadOf "https://github.com/"
 
-# 4. 找不到 main 包（monorepo / 多模块）
-# 修改 go build 目标为子目录
+# 4. Cannot find main package (monorepo / multi-module)
+# Change go build target to subdirectory
 RUN go build -o /app/server ./cmd/server/
-# 或
+# Or
 RUN go build -o /app/server ./cmd/api/
 
-# 5. 依赖 CGO 且必须 alpine — 安装 musl-libc
+# 5. Requires CGO and must use alpine — install musl-libc
 RUN apk add --no-cache gcc musl-dev
 RUN CGO_ENABLED=1 go build -o /app/server .
 ```
 
 ---
 
-## Docker Compose 模板
+## Docker Compose Template
 
 ```yaml
 version: "3.8"
@@ -126,12 +126,12 @@ services:
       - "<host_port>:<container_port>"
     environment:
       - PORT=<container_port>
-      # 注入数据库连接（若有）
+      # Inject database connection (if applicable)
       - DATABASE_URL=${DATABASE_URL:-}
       - REDIS_URL=${REDIS_URL:-}
     depends_on:
       db:
-        condition: service_healthy   # 若有数据库
+        condition: service_healthy   # If database exists
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:<container_port>/health"]
       interval: 5s
@@ -142,17 +142,17 @@ services:
 
 ---
 
-## 健康检查替代方案
+## Health Check Alternative
 
-Go 应用若无 `/health` 端点，使用 TCP 检查：
+If Go application has no `/health` endpoint, use TCP check:
 
 ```dockerfile
-# TCP 端口探活（不依赖 HTTP 路由）
+# TCP port probe (does not depend on HTTP routing)
 HEALTHCHECK --interval=5s --timeout=3s --retries=10 \
     CMD nc -z localhost <port> || exit 1
 ```
 
-安装 netcat：
+Install netcat:
 
 ```dockerfile
 RUN apk add --no-cache ca-certificates curl netcat-openbsd
@@ -160,16 +160,16 @@ RUN apk add --no-cache ca-certificates curl netcat-openbsd
 
 ---
 
-## 框架特定启动端口配置
+## Framework-Specific Port Configuration
 
-| 框架 | 端口配置方式 |
+| Framework | Port Configuration Method |
 |------|------------|
-| Gin | `router.Run(":PORT")` 或 `PORT` 环境变量 |
+| Gin | `router.Run(":PORT")` or `PORT` env variable |
 | Echo | `e.Start(":PORT")` |
 | Chi / stdlib | `http.ListenAndServe(":PORT", ...)` |
-| Beego | `beego.Run(":PORT")` 或 `app.conf` |
+| Beego | `beego.Run(":PORT")` or `app.conf` |
 
-在 Dockerfile 中传入端口：
+Pass port in Dockerfile:
 
 ```dockerfile
 ENV PORT=8080
@@ -178,7 +178,7 @@ CMD ["./server"]
 
 ---
 
-## 清理
+## Cleanup
 
 ```bash
 docker-compose down -v

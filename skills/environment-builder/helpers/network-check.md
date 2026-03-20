@@ -1,16 +1,16 @@
-# 网络检测与代理处理
+# Network Detection and Proxy Handling
 
-在 clone 项目或任何网络操作之前，先执行本文件中的检测。
+Before cloning a project or performing any network operation, run the checks in this file first.
 
 ---
 
-## 第一步：检测现有代理配置
+## Step 1: Detect Existing Proxy Configuration
 
 ```bash
 check_proxy() {
-    # 检查环境变量
+    # Check environment variables
     if [ -n "$http_proxy" ] || [ -n "$https_proxy" ] || [ -n "$HTTP_PROXY" ] || [ -n "$HTTPS_PROXY" ]; then
-        echo "✅ 检测到代理配置:"
+        echo "Proxy configuration detected:"
         [ -n "$http_proxy" ]  && echo "  http_proxy=$http_proxy"
         [ -n "$https_proxy" ] && echo "  https_proxy=$https_proxy"
         [ -n "$HTTP_PROXY" ]  && echo "  HTTP_PROXY=$HTTP_PROXY"
@@ -18,53 +18,53 @@ check_proxy() {
         return 0
     fi
 
-    # 检查 git 全局代理
+    # Check git global proxy
     GIT_PROXY=$(git config --global http.proxy 2>/dev/null)
     if [ -n "$GIT_PROXY" ]; then
-        echo "✅ 检测到 git 代理: $GIT_PROXY"
+        echo "Git proxy detected: $GIT_PROXY"
         return 0
     fi
 
-    echo "ℹ️ 未检测到代理配置"
+    echo "No proxy configuration detected"
     return 1
 }
 ```
 
 ---
 
-## 第二步：网络连通性测试
+## Step 2: Network Connectivity Test
 
 ```bash
 test_connectivity() {
-    echo "🔍 测试网络连通性..."
+    echo "Testing network connectivity..."
 
-    # 测试 GitHub（国内最常超时的）
+    # Test GitHub (most likely to timeout in China)
     GITHUB_OK=false
     if curl -s --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" https://github.com 2>/dev/null | grep -qE "^(200|301|302)"; then
         GITHUB_OK=true
-        echo "  ✅ GitHub 可直连"
+        echo "  GitHub is directly reachable"
     else
-        echo "  ❌ GitHub 连接超时或不可达"
+        echo "  GitHub connection timed out or unreachable"
     fi
 
-    # 测试国内站点（确认不是完全断网）
+    # Test domestic site (confirm it's not a complete network outage)
     DOMESTIC_OK=false
     if curl -s --connect-timeout 5 --max-time 10 -o /dev/null https://www.baidu.com 2>/dev/null; then
         DOMESTIC_OK=true
-        echo "  ✅ 国内网络正常"
+        echo "  Domestic network is working"
     else
-        echo "  ❌ 国内网络也不通（可能完全断网）"
+        echo "  Domestic network is also down (possible complete network outage)"
     fi
 
-    # 诊断结论
+    # Diagnosis conclusion
     if [ "$GITHUB_OK" = "true" ]; then
-        echo "📋 结论: 网络正常，可直接 clone"
+        echo "Conclusion: Network is normal, can clone directly"
         return 0
     elif [ "$DOMESTIC_OK" = "true" ]; then
-        echo "📋 结论: 国内网络正常但 GitHub 不可达，需要代理或镜像"
+        echo "Conclusion: Domestic network is normal but GitHub is unreachable, proxy or mirror needed"
         return 1
     else
-        echo "📋 结论: 网络不通，请检查网络连接"
+        echo "Conclusion: Network is down, please check your network connection"
         return 2
     fi
 }
@@ -72,29 +72,29 @@ test_connectivity() {
 
 ---
 
-## 第三步：Git Clone（带超时检测和自动回退）
+## Step 3: Git Clone (With Timeout Detection and Auto-Fallback)
 
 ```bash
 safe_git_clone() {
     local url="$1"
     local dest="$2"
-    local timeout=${3:-120}  # 默认 120 秒超时
+    local timeout=${3:-120}  # Default 120 second timeout
 
-    echo "📥 正在 clone: $url"
+    echo "Cloning: $url"
 
-    # 尝试 1: 直接 clone
+    # Attempt 1: Direct clone
     if timeout ${timeout} git clone --depth 1 "$url" "$dest" 2>&1; then
-        echo "✅ Clone 成功"
+        echo "Clone successful"
         return 0
     fi
 
-    echo "⚠️ 直接 clone 失败，诊断网络..."
+    echo "Direct clone failed, diagnosing network..."
 
-    # 检查是不是网络问题
+    # Check if it's a network issue
     if ! curl -s --connect-timeout 5 -o /dev/null https://github.com 2>/dev/null; then
-        echo "❌ 确认是网络问题（GitHub 不可达）"
+        echo "Confirmed network issue (GitHub unreachable)"
 
-        # 尝试 2: GitHub 镜像站
+        # Attempt 2: GitHub mirror sites
         local repo_path
         repo_path=$(echo "$url" | sed -E 's|https?://github\.com/||; s|\.git$||')
 
@@ -105,36 +105,36 @@ safe_git_clone() {
         )
 
         for mirror_url in "${mirrors[@]}"; do
-            echo "  🔄 尝试镜像: $mirror_url"
+            echo "  Trying mirror: $mirror_url"
             rm -rf "$dest" 2>/dev/null
             if timeout ${timeout} git clone --depth 1 "$mirror_url" "$dest" 2>&1; then
-                # 修正 remote 指向原始地址
+                # Fix remote to point to original URL
                 cd "$dest" && git remote set-url origin "$url" && cd -
-                echo "✅ 通过镜像 clone 成功"
+                echo "Clone successful via mirror"
                 return 0
             fi
         done
 
-        # 尝试 3: 询问用户代理
+        # Attempt 3: Ask user to configure proxy
         echo ""
-        echo "❌ 所有镜像都失败了。请配置代理后重试："
+        echo "All mirrors failed. Please configure a proxy and retry:"
         echo ""
-        echo "  方法 A: 设置环境变量"
-        echo "    export https_proxy=http://127.0.0.1:<端口>"
-        echo "    export http_proxy=http://127.0.0.1:<端口>"
+        echo "  Method A: Set environment variables"
+        echo "    export https_proxy=http://127.0.0.1:<port>"
+        echo "    export http_proxy=http://127.0.0.1:<port>"
         echo ""
-        echo "  方法 B: 设置 git 代理"
-        echo "    git config --global http.proxy http://127.0.0.1:<端口>"
-        echo "    git config --global https.proxy http://127.0.0.1:<端口>"
+        echo "  Method B: Set git proxy"
+        echo "    git config --global http.proxy http://127.0.0.1:<port>"
+        echo "    git config --global https.proxy http://127.0.0.1:<port>"
         echo ""
-        echo "  方法 C: 如果有 socks5 代理"
-        echo "    git config --global http.proxy socks5://127.0.0.1:<端口>"
+        echo "  Method C: If you have a socks5 proxy"
+        echo "    git config --global http.proxy socks5://127.0.0.1:<port>"
         echo ""
-        echo "  配置好后告诉我，我会重新 clone。"
+        echo "  Let me know once configured, and I will re-clone."
         return 1
     else
-        # GitHub 能连但 clone 失败（可能是仓库不存在、权限问题等）
-        echo "❌ GitHub 可达但 clone 失败，可能是仓库地址错误或需要认证"
+        # GitHub is reachable but clone failed (possibly repo doesn't exist, permission issue, etc.)
+        echo "GitHub is reachable but clone failed, possibly wrong repo URL or authentication required"
         return 1
     fi
 }
@@ -142,37 +142,37 @@ safe_git_clone() {
 
 ---
 
-## 使用方式
+## Usage
 
-agent 在 clone 之前按以下顺序调用：
+The agent calls these in order before cloning:
 
 ```bash
-# 1. 检查有没有现成的代理
+# 1. Check if there's an existing proxy
 check_proxy
 
-# 2. 测试连通性
+# 2. Test connectivity
 test_connectivity
 NETWORK_STATUS=$?
 
-# 3. 如果 GitHub 不通且没有代理，先提醒用户
+# 3. If GitHub is unreachable and no proxy, warn the user first
 if [ "$NETWORK_STATUS" -eq 1 ]; then
-    echo "⚠️ GitHub 不可达，clone 时会自动尝试镜像站"
+    echo "GitHub is unreachable, will automatically try mirror sites during clone"
 elif [ "$NETWORK_STATUS" -eq 2 ]; then
-    echo "❌ 网络完全不通，请先检查网络连接"
+    echo "Network is completely down, please check your network connection first"
     exit 1
 fi
 
-# 4. Clone（内部自动处理超时和镜像回退）
+# 4. Clone (internally handles timeout and mirror fallback)
 safe_git_clone "https://github.com/user/repo.git" "${SETUP_ROOT}/repo"
 ```
 
 ---
 
-## 代理设置后的验证
+## Verification After Proxy Setup
 
-用户配置代理后，用以下命令快速验证：
+After the user configures a proxy, use the following commands to quickly verify:
 
 ```bash
 curl -s --connect-timeout 5 -o /dev/null -w "GitHub: HTTP %{http_code} (%{time_total}s)\n" https://github.com
-git ls-remote --exit-code https://github.com/torvalds/linux.git HEAD >/dev/null 2>&1 && echo "✅ Git 代理生效" || echo "❌ Git 仍然不通"
+git ls-remote --exit-code https://github.com/torvalds/linux.git HEAD >/dev/null 2>&1 && echo "Git proxy is working" || echo "Git is still unreachable"
 ```

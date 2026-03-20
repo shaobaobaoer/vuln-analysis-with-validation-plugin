@@ -1,10 +1,10 @@
-# MySQL 搭建
+# MySQL Setup
 
-前置依赖：`helpers/port-isolation.md` + `helpers/image-check.md`。
+Prerequisite: `helpers/port-isolation.md` + `helpers/image-check.md`.
 
 ---
 
-## 启动
+## Start
 
 ```bash
 ensure_image "mysql:8"
@@ -25,16 +25,16 @@ wait_for_service "mysql" "$DB_PORT" "setup_${PROJECT_NAME}_mysql" 30
 echo "MySQL → localhost:${DB_PORT}"
 ```
 
-## 连接信息
+## Connection Info
 
 ```
-HOST=localhost / setup_${PROJECT_NAME}_mysql（容器间）
-PORT=${DB_PORT} / 3306（容器间）
+HOST=localhost / setup_${PROJECT_NAME}_mysql (inter-container)
+PORT=${DB_PORT} / 3306 (inter-container)
 USER=setup  PASSWORD=setup123  DATABASE=${PROJECT_NAME}
 CONNECTION_STRING=mysql://setup:setup123@localhost:${DB_PORT}/${PROJECT_NAME}
 ```
 
-## 清理
+## Cleanup
 
 ```bash
 docker rm -f "setup_${PROJECT_NAME}_mysql" 2>/dev/null

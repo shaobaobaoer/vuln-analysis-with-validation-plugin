@@ -1,29 +1,29 @@
 #!/bin/bash
-# health_check.sh - 验证项目环境是否就绪
+# health_check.sh - Verify project environment is ready
 #
-# 用法:
+# Usage:
 #   bash health_check.sh <project_name> <web_port> [services...]
 #
-# services 格式: <type>:<port>:<container_name>
+# services format: <type>:<port>:<container_name>
 #
-# 示例:
+# Examples:
 #   bash health_check.sh myapp 8000
 #   bash health_check.sh myapp 8000 postgres:5432:setup_myapp_postgres
 #   bash health_check.sh myapp 8000 sqlite
-#   bash health_check.sh myapp none   # ML 项目无 Web 端口
+#   bash health_check.sh myapp none   # ML project with no web port
 #
-# 环境变量:
-#   QUIET=true  → 安静模式，只输出机器可读结果
-#   QUIET=false → 完整模式，带颜色（默认）
+# Environment variables:
+#   QUIET=true  -> quiet mode, only output machine-readable results
+#   QUIET=false -> full mode, with colors (default)
 
-PROJECT_NAME=${1:?"用法: health_check.sh <project_name> <web_port|none> [services...]"}
-WEB_PORT=${2:?"缺少 web_port 参数（无 Web 端口填 none）"}
+PROJECT_NAME=${1:?"Usage: health_check.sh <project_name> <web_port|none> [services...]"}
+WEB_PORT=${2:?"Missing web_port parameter (use none if no web port)"}
 shift 2
 SERVICES=("$@")
 
 QUIET=${QUIET:-false}
 
-# 颜色 & 计数
+# Colors & counters
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -38,15 +38,15 @@ check() {
     local name="$1" result="$2" msg="$3"
     if [ "$result" -eq 0 ]; then
         ((PASS++))
-        [ "$QUIET" != "true" ] && echo -e "  ${GREEN}✅ $name${NC}: $msg"
+        [ "$QUIET" != "true" ] && echo -e "  ${GREEN}OK $name${NC}: $msg"
     elif [ "$result" -eq 2 ]; then
         ((WARN++))
         WARN_MSGS+=("${name}: ${msg}")
-        [ "$QUIET" != "true" ] && echo -e "  ${YELLOW}⚠️  $name${NC}: $msg"
+        [ "$QUIET" != "true" ] && echo -e "  ${YELLOW}WARN $name${NC}: $msg"
     else
         ((FAIL++))
         FAILURE_MSGS+=("${name}: ${msg}")
-        [ "$QUIET" != "true" ] && echo -e "  ${RED}❌ $name${NC}: $msg"
+        [ "$QUIET" != "true" ] && echo -e "  ${RED}FAIL $name${NC}: $msg"
     fi
 }
 
@@ -74,130 +74,130 @@ verify_db_connection() {
     esac
 }
 
-# ── 开始检查 ──
+# ── Begin checks ──
 
 detail ""
 detail "========================================="
-detail " 🔍 环境健康检查: ${PROJECT_NAME}"
+detail " Environment Health Check: ${PROJECT_NAME}"
 detail "========================================="
 
-# 1. Web 应用检查（web_port=none 时跳过）
+# 1. Web application check (skip when web_port=none)
 if [ "$WEB_PORT" != "none" ]; then
     detail ""
-    detail " ${CYAN}[Web 应用]${NC}"
+    detail " ${CYAN}[Web Application]${NC}"
 
     if port_listening "$WEB_PORT"; then
-        check "端口 ${WEB_PORT}" 0 "正在监听"
+        check "Port ${WEB_PORT}" 0 "listening"
     else
-        check "端口 ${WEB_PORT}" 1 "未监听"
+        check "Port ${WEB_PORT}" 1 "not listening"
     fi
 
     HTTP_OK=false
     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://localhost:${WEB_PORT}/" 2>/dev/null)
 
     if [ -n "$HTTP_CODE" ] && [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 500 ]; then
-        check "HTTP 响应" 0 "状态码 ${HTTP_CODE}"
+        check "HTTP response" 0 "status code ${HTTP_CODE}"
         HTTP_OK=true
     else
         for path in "/api" "/health" "/login" "/admin" "/index.html"; do
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://localhost:${WEB_PORT}${path}" 2>/dev/null)
             if [ -n "$HTTP_CODE" ] && [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 500 ]; then
-                check "HTTP 响应" 0 "状态码 ${HTTP_CODE} (via ${path})"
+                check "HTTP response" 0 "status code ${HTTP_CODE} (via ${path})"
                 HTTP_OK=true
                 break
             fi
         done
-        [ "$HTTP_OK" = "false" ] && check "HTTP 响应" 1 "无法连接"
+        [ "$HTTP_OK" = "false" ] && check "HTTP response" 1 "unable to connect"
     fi
 else
     detail ""
-    detail " ${CYAN}[ML/脚本项目 - 无 Web 端口]${NC}"
-    check "项目类型" 0 "ML/脚本项目，跳过 HTTP 检查"
+    detail " ${CYAN}[ML/Script Project - No Web Port]${NC}"
+    check "Project type" 0 "ML/script project, skipping HTTP check"
 fi
 
-# 2. 数据库 & 服务检查
+# 2. Database & service checks
 if [ ${#SERVICES[@]} -gt 0 ]; then
     detail ""
-    detail " ${CYAN}[数据库 & 服务]${NC}"
+    detail " ${CYAN}[Database & Services]${NC}"
 
     for svc in "${SERVICES[@]}"; do
         IFS=':' read -r SVC_TYPE SVC_PORT SVC_CONTAINER <<< "$svc"
 
         if [ "$SVC_TYPE" = "sqlite" ]; then
-            check "SQLite" 0 "文件数据库，无需网络服务"
+            check "SQLite" 0 "file database, no network service needed"
             continue
         fi
 
         if port_listening "$SVC_PORT"; then
-            check "${SVC_TYPE} 端口 ${SVC_PORT}" 0 "正在监听"
+            check "${SVC_TYPE} port ${SVC_PORT}" 0 "listening"
         else
-            check "${SVC_TYPE} 端口 ${SVC_PORT}" 1 "未监听"
+            check "${SVC_TYPE} port ${SVC_PORT}" 1 "not listening"
             continue
         fi
 
         if [ -n "$SVC_CONTAINER" ]; then
             CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' "$SVC_CONTAINER" 2>/dev/null)
             if [ "$CONTAINER_STATUS" = "running" ]; then
-                check "${SVC_TYPE} 容器" 0 "${SVC_CONTAINER} 运行中"
+                check "${SVC_TYPE} container" 0 "${SVC_CONTAINER} running"
             elif [ -n "$CONTAINER_STATUS" ]; then
-                check "${SVC_TYPE} 容器" 1 "${SVC_CONTAINER} 状态: ${CONTAINER_STATUS}"
+                check "${SVC_TYPE} container" 1 "${SVC_CONTAINER} status: ${CONTAINER_STATUS}"
                 continue
             fi
         fi
 
         if verify_db_connection "$SVC_TYPE" "$SVC_PORT" "$SVC_CONTAINER"; then
-            check "${SVC_TYPE} 连接验证" 0 "服务可用"
+            check "${SVC_TYPE} connection test" 0 "service available"
         else
-            check "${SVC_TYPE} 连接验证" 2 "端口开放但服务未就绪"
+            check "${SVC_TYPE} connection test" 2 "port open but service not ready"
         fi
     done
 fi
 
-# 3. Docker 环境检查
+# 3. Docker environment check
 detail ""
-detail " ${CYAN}[Docker 环境]${NC}"
+detail " ${CYAN}[Docker Environment]${NC}"
 
 RUNNING_CONTAINERS=$(docker ps --format '{{.Names}}' 2>/dev/null | grep "setup_${PROJECT_NAME}" || true)
 RUNNING_COUNT=0
 [ -n "$RUNNING_CONTAINERS" ] && RUNNING_COUNT=$(echo "$RUNNING_CONTAINERS" | wc -l)
 
 if [ "$RUNNING_COUNT" -gt 0 ]; then
-    check "运行中容器" 0 "${RUNNING_COUNT} 个"
+    check "Running containers" 0 "${RUNNING_COUNT} found"
 else
-    check "运行中容器" 0 "无 Docker 容器（可能是本地部署）"
+    check "Running containers" 0 "no Docker containers (possibly local deployment)"
 fi
 
 EXITED_CONTAINERS=$(docker ps -a --filter "status=exited" --format '{{.Names}}' 2>/dev/null | grep "setup_${PROJECT_NAME}" || true)
 EXITED_COUNT=0
 [ -n "$EXITED_CONTAINERS" ] && EXITED_COUNT=$(echo "$EXITED_CONTAINERS" | wc -l)
 
-[ "$EXITED_COUNT" -gt 0 ] && check "崩溃容器" 1 "${EXITED_COUNT} 个已退出"
+[ "$EXITED_COUNT" -gt 0 ] && check "Crashed containers" 1 "${EXITED_COUNT} exited"
 
 SETUP_NET="setup_net_${PROJECT_NAME}"
 if docker network inspect "$SETUP_NET" >/dev/null 2>&1; then
-    check "Docker 网络" 0 "${SETUP_NET} 存在"
+    check "Docker network" 0 "${SETUP_NET} exists"
 else
-    check "Docker 网络" 2 "${SETUP_NET} 不存在（可能是本地部署）"
+    check "Docker network" 2 "${SETUP_NET} does not exist (possibly local deployment)"
 fi
 
-# 4. 系统资源
+# 4. System resources
 detail ""
-detail " ${CYAN}[系统资源]${NC}"
+detail " ${CYAN}[System Resources]${NC}"
 
 DISK_PCT=$(df / | awk 'NR==2{print $5}' | tr -d '%')
 DISK_AVAIL=$(df -h / | awk 'NR==2{print $4}')
-[ "$DISK_PCT" -gt 90 ] && check "磁盘空间" 2 "可用 ${DISK_AVAIL} (${DISK_PCT}% 已用)" || check "磁盘空间" 0 "可用 ${DISK_AVAIL}"
+[ "$DISK_PCT" -gt 90 ] && check "Disk space" 2 "available ${DISK_AVAIL} (${DISK_PCT}% used)" || check "Disk space" 0 "available ${DISK_AVAIL}"
 
-MEM_AVAIL=$(free -h 2>/dev/null | awk '/Mem:/{print $7}' || echo "未知")
-check "可用内存" 0 "${MEM_AVAIL}"
+MEM_AVAIL=$(free -h 2>/dev/null | awk '/Mem:/{print $7}' || echo "unknown")
+check "Available memory" 0 "${MEM_AVAIL}"
 
-# GPU 检查（ML 项目有用）
+# GPU check (useful for ML projects)
 if nvidia-smi >/dev/null 2>&1; then
     GPU_INFO=$(nvidia-smi --query-gpu=name,memory.total,memory.free --format=csv,noheader 2>/dev/null | head -1)
     check "GPU" 0 "${GPU_INFO}"
 fi
 
-# ── 最终结果 ──
+# ── Final result ──
 
 if [ "$FAIL" -eq 0 ] && [ "$WARN" -eq 0 ]; then
     STATUS="READY"
@@ -218,11 +218,11 @@ else
     echo ""
     echo "========================================="
     if [ "$STATUS" = "READY" ]; then
-        echo -e " 结果: ${GREEN}✅ READY${NC} (${PASS} 项通过)"
+        echo -e " Result: ${GREEN}READY${NC} (${PASS} checks passed)"
     elif [ "$STATUS" = "PARTIAL" ]; then
-        echo -e " 结果: ${YELLOW}⚠️  PARTIAL${NC} (${PASS} 通过, ${WARN} 警告)"
+        echo -e " Result: ${YELLOW}PARTIAL${NC} (${PASS} passed, ${WARN} warnings)"
     else
-        echo -e " 结果: ${RED}❌ FAILED${NC} (${PASS} 通过, ${FAIL} 失败, ${WARN} 警告)"
+        echo -e " Result: ${RED}FAILED${NC} (${PASS} passed, ${FAIL} failed, ${WARN} warnings)"
     fi
     echo "========================================="
     echo ""

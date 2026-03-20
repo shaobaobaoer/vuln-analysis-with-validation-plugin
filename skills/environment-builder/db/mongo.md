@@ -1,10 +1,10 @@
-# MongoDB 搭建
+# MongoDB Setup
 
-前置依赖：`helpers/port-isolation.md` + `helpers/image-check.md`。
+Prerequisite: `helpers/port-isolation.md` + `helpers/image-check.md`.
 
 ---
 
-## 启动
+## Start
 
 ```bash
 ensure_image "mongo:7"
@@ -20,15 +20,15 @@ wait_for_service "mongo" "$MONGO_PORT" "setup_${PROJECT_NAME}_mongo" 20
 echo "MongoDB → localhost:${MONGO_PORT}"
 ```
 
-## 连接信息
+## Connection Info
 
 ```
-HOST=localhost / setup_${PROJECT_NAME}_mongo（容器间）
-PORT=${MONGO_PORT} / 27017（容器间）
+HOST=localhost / setup_${PROJECT_NAME}_mongo (inter-container)
+PORT=${MONGO_PORT} / 27017 (inter-container)
 URL=mongodb://localhost:${MONGO_PORT}/${PROJECT_NAME}
 ```
 
-## 清理
+## Cleanup
 
 ```bash
 docker rm -f "setup_${PROJECT_NAME}_mongo" 2>/dev/null

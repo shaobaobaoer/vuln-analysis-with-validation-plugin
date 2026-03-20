@@ -1,10 +1,10 @@
-# Redis 搭建
+# Redis Setup
 
-前置依赖：`helpers/port-isolation.md` + `helpers/image-check.md`。
+Prerequisite: `helpers/port-isolation.md` + `helpers/image-check.md`.
 
 ---
 
-## 启动
+## Start
 
 ```bash
 ensure_image "redis:7"
@@ -20,15 +20,15 @@ wait_for_service "redis" "$REDIS_PORT" "setup_${PROJECT_NAME}_redis" 15
 echo "Redis → localhost:${REDIS_PORT}"
 ```
 
-## 连接信息
+## Connection Info
 
 ```
-HOST=localhost / setup_${PROJECT_NAME}_redis（容器间）
-PORT=${REDIS_PORT} / 6379（容器间）
+HOST=localhost / setup_${PROJECT_NAME}_redis (inter-container)
+PORT=${REDIS_PORT} / 6379 (inter-container)
 URL=redis://localhost:${REDIS_PORT}/0
 ```
 
-## 清理
+## Cleanup
 
 ```bash
 docker rm -f "setup_${PROJECT_NAME}_redis" 2>/dev/null

@@ -21,17 +21,10 @@ echo "[${MODE}] Installing vuln-analysis to ${DEST} ..."
 mkdir -p "${DEST}"
 
 # Core structure
-for dir in commands agents skills core tools examples; do
+for dir in commands agents skills; do
 if [ -d "${SCRIPT_DIR}/${dir}" ]; then
 mkdir -p "${DEST}/${dir}"
 cp -r "${SCRIPT_DIR}/${dir}/"* "${DEST}/${dir}/"
-fi
-done
-
-# Copy top-level files
-for f in requirements.txt; do
-if [ -f "${SCRIPT_DIR}/${f}" ]; then
-cp "${SCRIPT_DIR}/${f}" "${DEST}/${f}"
 fi
 done
 

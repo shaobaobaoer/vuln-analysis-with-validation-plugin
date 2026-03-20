@@ -67,21 +67,31 @@ vuln-analysis-with-validation-plugin/
 ├── examples/                              # Example PoCs and Dockerfiles
 ├── README.md                              # This file
 ├── requirements.txt
-├── install-claude.sh                      # Install for Claude Code (--local for project-level)
-└── install-codex.sh                       # Install for Codex (--local for project-level)
+├── install-codex.sh                       # Install for Codex (--local for project-level)
+└── install-qoder.sh                       # Install for Qoder
 ```
 
 ## Installation
 
-### One-Click Install
+### Claude Code (Recommended)
+
+Use the built-in `plugin` command to install — no install script needed:
 
 ```bash
 # Global install (all projects)
-./install-claude.sh           # → ~/.claude/plugins/vuln-analysis/
+claude plugin add /path/to/vuln-analysis-with-validation-plugin
+
+# Project-level install (current project only)
+claude plugin add --local /path/to/vuln-analysis-with-validation-plugin
+```
+
+### Codex
+
+```bash
+# Global install
 ./install-codex.sh            # → ~/.codex/
 
 # Local install (current project only)
-./install-claude.sh --local   # → ./.claude/plugins/vuln-analysis/
 ./install-codex.sh --local    # → ./.codex/
 ```
 

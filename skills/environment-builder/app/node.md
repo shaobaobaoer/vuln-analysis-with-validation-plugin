@@ -1,30 +1,30 @@
-# Node.js / TypeScript 项目搭建
+# Node.js / TypeScript Project Setup
 
-当项目没有 Docker Compose / Dockerfile，且识别为 Node.js 或 TypeScript 项目时使用。
+Used when the project has no Docker Compose / Dockerfile and is identified as a Node.js or TypeScript project.
 
-前置依赖：`helpers/port-isolation.md`。
-数据库已由 `db/*.md` 启动完毕。
+Prerequisite: `helpers/port-isolation.md`.
+Databases have already been started by `db/*.md`.
 
-> **MANDATORY (vuln-analysis)**: 漏洞分析模式下，所有执行必须在 Docker 容器内进行。先生成 Dockerfile，再继续后续步骤。
+> **MANDATORY (vuln-analysis)**: In vulnerability analysis mode, all execution must be done inside Docker containers. Generate a Dockerfile first, then proceed with subsequent steps.
 
 ---
 
-## 检测项目类型
+## Detect Project Type
 
 ```bash
 cd "$PROJECT_DIR"
 
-# 检测 TypeScript
+# Detect TypeScript
 IS_TYPESCRIPT=false
 [ -f tsconfig.json ] && IS_TYPESCRIPT=true
 grep -q '"typescript"' package.json 2>/dev/null && IS_TYPESCRIPT=true
 
-# 检测包管理器
+# Detect package manager
 PKG_MANAGER="npm"
 [ -f yarn.lock ]       && PKG_MANAGER="yarn"
 [ -f pnpm-lock.yaml ]  && PKG_MANAGER="pnpm"
 
-# 检测框架
+# Detect framework
 FRAMEWORK="unknown"
 grep -q '"express"'  package.json 2>/dev/null && FRAMEWORK="express"
 grep -q '"fastify"'  package.json 2>/dev/null && FRAMEWORK="fastify"
@@ -33,11 +33,11 @@ grep -q '"hapi"'     package.json 2>/dev/null && FRAMEWORK="hapi"
 grep -q '"nest"'     package.json 2>/dev/null && FRAMEWORK="nestjs"
 grep -q '"next"'     package.json 2>/dev/null && FRAMEWORK="nextjs"
 
-# 检测 Node 版本要求
+# Detect Node version requirement
 NODE_VERSION=$(node -e "try{const e=require('./package.json').engines?.node||'';console.log(e.replace(/[^0-9.]/g,'').split('.')[0]||'20')}catch(e){console.log('20')}" 2>/dev/null)
 NODE_VERSION=${NODE_VERSION:-20}
 
-# 检测端口
+# Detect port
 APP_PORT=$(grep -rE "listen\(([0-9]{3,5})|PORT.*=.*([0-9]{3,5})" \
     $(find . -name "*.js" -o -name "*.ts" | grep -v node_modules | grep -v dist | head -20) 2>/dev/null \
     | grep -oE '[0-9]{3,5}' | grep -v '^3$\|^30$' | head -1)
@@ -48,15 +48,15 @@ echo "TypeScript: $IS_TYPESCRIPT | Framework: $FRAMEWORK | Port: $APP_PORT | Nod
 
 ---
 
-## Dockerfile 模板（JavaScript — 单阶段）
+## Dockerfile Template (JavaScript — Single Stage)
 
-当 `IS_TYPESCRIPT=false` 时使用：
+Used when `IS_TYPESCRIPT=false`:
 
 ```dockerfile
 FROM node:<node_version>-slim
 WORKDIR /app
 
-# 安装依赖（仅 production）
+# Install dependencies (production only)
 COPY package*.json ./
 RUN npm ci --omit=dev
 
@@ -71,9 +71,9 @@ CMD ["node", "app.js"]
 
 ---
 
-## Dockerfile 模板（TypeScript — 多阶段 build）
+## Dockerfile Template (TypeScript — Multi-stage Build)
 
-当 `IS_TYPESCRIPT=true` 时使用：
+Used when `IS_TYPESCRIPT=true`:
 
 ```dockerfile
 # ── Stage 1: builder ──────────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ COPY package*.json tsconfig*.json ./
 RUN npm ci
 
 COPY src/ ./src/
-# 若存在其他 TS 目录也复制进来
+# Copy other TS directories if they exist
 COPY . .
 
 RUN npm run build
@@ -105,35 +105,35 @@ HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
 CMD ["node", "dist/index.js"]
 ```
 
-### 变量替换
+### Variable Substitution
 
-| 占位符 | 替换为 |
+| Placeholder | Replace With |
 |--------|--------|
-| `<node_version>` | `NODE_VERSION`（如 `20`，最低 `18`） |
-| `<port>` | 检测到的端口（默认 `3000`） |
+| `<node_version>` | `NODE_VERSION` (e.g. `20`, minimum `18`) |
+| `<port>` | Detected port (default `3000`) |
 
 ---
 
-## 编译失败处理
+## Build Failure Handling
 
 ```bash
-# peer 依赖冲突
+# Peer dependency conflicts
 RUN npm install --legacy-peer-deps
 
-# 网络超时 — 使用镜像源
+# Network timeout — use mirror
 RUN npm config set registry https://registry.npmmirror.com && npm ci
 
-# node-gyp 编译失败（native 模块）
+# node-gyp build failure (native modules)
 RUN apt-get update && apt-get install -y build-essential python3 && npm ci
 
-# TypeScript 编译失败 — 检查 tsconfig
-# 常见问题：outDir 路径不匹配、缺少 @types 包
-# 检查 package.json 中 "build" 脚本的实际命令：
+# TypeScript compilation failure — check tsconfig
+# Common issues: outDir path mismatch, missing @types packages
+# Check the actual command in the "build" script in package.json:
 #   "build": "tsc" → dist/
-#   "build": "tsc -p tsconfig.build.json" → 使用特定配置
+#   "build": "tsc -p tsconfig.build.json" → uses specific config
 #   "build": "nest build" → NestJS → dist/main.js
 
-# NestJS 特殊处理
+# NestJS special handling
 FROM node:20-slim AS builder
 RUN npm ci && npx nest build
 # CMD ["node", "dist/main.js"]
@@ -141,7 +141,7 @@ RUN npm ci && npx nest build
 
 ---
 
-## 环境变量
+## Environment Variables
 
 ```bash
 if [ -f .env.example ] && [ ! -f .env ]; then
@@ -149,7 +149,7 @@ if [ -f .env.example ] && [ ! -f .env ]; then
 fi
 ```
 
-在 Dockerfile 中注入：
+Inject in Dockerfile:
 
 ```dockerfile
 ENV NODE_ENV=production
@@ -158,7 +158,7 @@ ENV PORT=<port>
 
 ---
 
-## 数据库迁移（Dockerfile 内）
+## Database Migration (Inside Dockerfile)
 
 ```dockerfile
 # Prisma
@@ -171,7 +171,7 @@ CMD ["sh", "-c", "node dist/migrate.js && node dist/main.js"]
 
 ---
 
-## 清理
+## Cleanup
 
 ```bash
 docker-compose down -v
