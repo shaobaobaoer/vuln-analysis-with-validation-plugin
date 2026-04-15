@@ -38,7 +38,8 @@ vuln-analysis-with-validation-plugin/
 │   ├── reproduce.md                       #   /reproduce — run reproduction
 │   └── report.md                          #   /report — generate report
 ├── agents/                                # Agent definitions
-│   ├── orchestrator/AGENT.md              #   Pipeline coordinator (opus)
+│   ├── *.md                               #   Cursor: symlinks to each `*/AGENT.md` (flat layout required)
+│   ├── orchestrator/AGENT.md              #   Pipeline coordinator (opus) — canonical copy for Claude Code
 │   ├── analyzer/AGENT.md                  #   Target + vuln analysis (opus)
 │   ├── builder/AGENT.md                   #   Docker env builder (sonnet)
 │   ├── exploiter/AGENT.md                 #   PoC execution + retry (opus)
@@ -80,7 +81,7 @@ vuln-analysis-with-validation-plugin/
 
 ### Cursor
 
-This repository follows the [Cursor plugin layout](https://github.com/cursor/plugin-template): a `.cursor-plugin/plugin.json` manifest at the **plugin root**, plus `commands/`, `agents/`, `skills/`, and `assets/logo.svg`.
+This repository follows the [Cursor plugin layout](https://github.com/cursor/plugin-template): a `.cursor-plugin/plugin.json` manifest at the **plugin root**, plus `commands/`, `agents/`, `skills/`, and `assets/logo.svg`. The manifest uses **default component discovery** (no explicit `commands`/`agents`/`skills` paths) so Cursor resolves `commands/` and `commands/*.md` from the plugin root correctly.
 
 **Install (local plugin, recommended for development):**
 
@@ -160,7 +161,8 @@ Each command file is Markdown with YAML frontmatter (`name`, `description`). The
 
 ### Agents and skills
 
-- **Agents** live under `agents/*/AGENT.md` (orchestrator, analyzer, builder, exploiter, reporter). Cursor uses them as agent definitions for delegation and routing in the pipeline.
+- **Agents (canonical)** live under `agents/*/AGENT.md` (orchestrator, analyzer, builder, exploiter, reporter). Claude Code and docs reference these paths.
+- **Agents (Cursor)** — Per [Cursor’s plugin reference](https://cursor.com/docs/reference/plugins), agent files must appear as **top-level markdown under `agents/`** (e.g. `agents/security-reviewer.md` in their template), not only nested folders. This repo adds **`agents/orchestrator.md` … `reporter.md` as symlinks** to each `*/AGENT.md` so Cursor discovers them while keeping a single source of truth. On Windows, enable Git symlink support or clone with symlinks on; if symlinks are checked out as plain files, recreate them or copy the `AGENT.md` content into the flat `.md` names.
 - **Skills** live under `skills/*/SKILL.md`. They activate when the workflow needs that capability (see each command’s “Activation Map” or orchestrator docs).
 
 Model hints in agent frontmatter (e.g. `model: opus`) describe the **original Claude Code** setup. In Cursor, the **model you pick in the UI** applies; treat those fields as guidance, not a hard requirement.
@@ -173,7 +175,8 @@ Pull the latest code in this repo; the symlink under `~/.cursor/plugins/local/vu
 
 | Issue | What to try |
 |-------|-------------|
-| `/` does not list plugin commands | Confirm `~/.cursor/plugins/local/vuln-analysis` exists and is a symlink to this repo; restart Cursor or reload the window. |
+| `/` does not list plugin commands | Confirm `~/.cursor/plugins/local/vuln-analysis` exists and is a symlink to this repo; restart Cursor or reload the window. Ensure `.cursor-plugin/plugin.json` does not point `commands` at a wrong base path — this repo relies on **default** `commands/` discovery. |
+| Only skills load, not commands or agents | Cursor expects `commands/*.md` at the plugin root and **flat** `agents/*.md`. This repo uses default discovery plus `agents/<role>.md` symlinks to `*/AGENT.md`. Fix symlinks on Windows if they did not clone correctly. |
 | Commands appear but behave oddly | Open the matching file in `commands/` and ensure frontmatter `name` / `description` are present. |
 | Plugin path moved | Re-run `./install-cursor.sh` from the new location to refresh the symlink. |
 
