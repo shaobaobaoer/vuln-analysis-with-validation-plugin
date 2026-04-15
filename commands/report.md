@@ -1,4 +1,5 @@
 ---
+name: report
 description: Compile all vulnerability findings into a comprehensive Markdown report with executive summary, per-vulnerability details, and remediation recommendations.
 ---
 

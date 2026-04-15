@@ -1,4 +1,5 @@
 ---
+name: env-setup
 description: Generate and build a Docker environment for a target project without running the full vulnerability scan. Outputs Dockerfile and verifies container health.
 ---
 
