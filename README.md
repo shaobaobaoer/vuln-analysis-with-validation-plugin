@@ -1,6 +1,6 @@
 # Vuln-Analysis: Automated Security Vulnerability Verification Plugin
 
-A Claude Code / Codex plugin for automated security vulnerability verification of open-source libraries, web applications, and CLI tools.
+A **Claude Code**, **Cursor**, and **Codex** plugin for automated security vulnerability verification of open-source libraries, web applications, and CLI tools.
 
 > **Authorization Notice**: This tool is designed for authorized security testing, penetration testing engagements, CTF competitions, and defensive security research only.
 
@@ -24,9 +24,13 @@ This plugin automates the full vulnerability analysis lifecycle through a **9-st
 
 ```
 vuln-analysis-with-validation-plugin/
+├── .cursor-plugin/
+│   └── plugin.json                        # Cursor IDE plugin manifest (required for Cursor)
+├── assets/
+│   └── logo.svg                           # Plugin logo (Cursor marketplace)
 ├── .claude-plugin/
-│   ├── plugin.json                        # Plugin metadata (required)
-│   └── marketplace.json                   # Marketplace listing
+│   ├── plugin.json                        # Claude Code plugin metadata
+│   └── marketplace.json                   # Claude Code marketplace listing
 ├── commands/                              # Slash commands
 │   ├── vuln-scan.md                       #   /vuln-scan — full 9-step pipeline
 │   ├── env-setup.md                       #   /env-setup — Docker env only
@@ -67,11 +71,31 @@ vuln-analysis-with-validation-plugin/
 ├── examples/                              # Example PoCs and Dockerfiles
 ├── README.md                              # This file
 ├── requirements.txt
+├── install-cursor.sh                      # Register repo as Cursor local plugin (~/.cursor/plugins/local/)
 ├── install-codex.sh                       # Install for Codex (--local for project-level)
 └── install-qoder.sh                       # Install for Qoder
 ```
 
 ## Installation
+
+### Cursor
+
+This repository follows the [Cursor plugin layout](https://github.com/cursor/plugin-template): a `.cursor-plugin/plugin.json` manifest at the **plugin root**, plus `commands/`, `agents/`, `skills/`, and `assets/logo.svg`.
+
+**Install (local plugin, recommended for development):**
+
+```bash
+git clone https://github.com/shaobaobaoer/vuln-analysis-with-validation-plugin.git
+cd vuln-analysis-with-validation-plugin
+chmod +x install-cursor.sh
+./install-cursor.sh
+```
+
+This creates `~/.cursor/plugins/local/vuln-analysis` → this directory. **Restart Cursor** or run **Developer: Reload Window** so the IDE loads the plugin.
+
+**Uninstall:** `rm -f ~/.cursor/plugins/local/vuln-analysis`
+
+See [Using with Cursor](#using-with-cursor) below for day-to-day usage, slash commands, and troubleshooting.
 
 ### Claude Code (Recommended)
 
@@ -107,6 +131,53 @@ git clone https://github.com/shaobaobaoer/vuln-analysis-with-validation-plugin.g
 - Docker and docker-compose
 - Python 3.12+
 - [`uv`](https://github.com/astral-sh/uv) (Python package manager — used inside Docker containers)
+
+## Using with Cursor
+
+After [installing the local plugin](#cursor), Cursor loads the manifest in `.cursor-plugin/plugin.json` and exposes the bundled **commands**, **agents**, and **skills** to the AI. You work in the **Agent** or **Chat** panel; behavior follows [Cursor’s plugin documentation](https://cursor.com/docs/plugins).
+
+### Slash commands
+
+1. Open **Agent** or **Chat** in Cursor.
+2. Type **`/`** in the input box to open the command palette.
+3. Choose a command (file names under `commands/` map to names like `vuln-scan`, `env-setup`, …).
+
+| Command | Purpose |
+|---------|---------|
+| `/vuln-scan` | Full 9-step pipeline from a GitHub repo URL |
+| `/env-setup` | Docker environment setup only |
+| `/poc-gen` | PoC generation |
+| `/reproduce` | Run reproduction / validation |
+| `/report` | Generate the final report |
+
+Example:
+
+```
+/vuln-scan https://github.com/example/vulnerable-app
+```
+
+Each command file is Markdown with YAML frontmatter (`name`, `description`). The body describes what the agent should do; follow the steps there.
+
+### Agents and skills
+
+- **Agents** live under `agents/*/AGENT.md` (orchestrator, analyzer, builder, exploiter, reporter). Cursor uses them as agent definitions for delegation and routing in the pipeline.
+- **Skills** live under `skills/*/SKILL.md`. They activate when the workflow needs that capability (see each command’s “Activation Map” or orchestrator docs).
+
+Model hints in agent frontmatter (e.g. `model: opus`) describe the **original Claude Code** setup. In Cursor, the **model you pick in the UI** applies; treat those fields as guidance, not a hard requirement.
+
+### Updating
+
+Pull the latest code in this repo; the symlink under `~/.cursor/plugins/local/vuln-analysis` still points here, so changes to commands, agents, and skills apply on the next reload. Run **Developer: Reload Window** if Cursor does not pick up edits immediately.
+
+### Troubleshooting
+
+| Issue | What to try |
+|-------|-------------|
+| `/` does not list plugin commands | Confirm `~/.cursor/plugins/local/vuln-analysis` exists and is a symlink to this repo; restart Cursor or reload the window. |
+| Commands appear but behave oddly | Open the matching file in `commands/` and ensure frontmatter `name` / `description` are present. |
+| Plugin path moved | Re-run `./install-cursor.sh` from the new location to refresh the symlink. |
+
+For publishing to the **Cursor Marketplace**, see [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish) and the [plugin template](https://github.com/cursor/plugin-template) checklist.
 
 ## Quick Start
 
