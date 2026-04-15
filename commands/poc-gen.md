@@ -1,4 +1,5 @@
 ---
+name: poc-gen
 description: Generate Proof-of-Concept exploit scripts for identified vulnerabilities. Each PoC is a standalone Python script with configurable target and timeout.
 ---
 

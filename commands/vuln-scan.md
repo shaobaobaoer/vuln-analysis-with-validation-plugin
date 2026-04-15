@@ -1,4 +1,5 @@
 ---
+name: vuln-scan
 description: Run the full 9-step vulnerability analysis pipeline against a GitHub repository. Extracts target, builds Docker env, scans for vulns, generates PoCs, reproduces with anti-cheat validation, and delivers report.
 ---
 

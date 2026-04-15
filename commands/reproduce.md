@@ -1,4 +1,5 @@
 ---
+name: reproduce
 description: Execute PoC scripts against the containerized target environment and verify vulnerability reproduction. Includes automatic retry loop for failures.
 ---
 
